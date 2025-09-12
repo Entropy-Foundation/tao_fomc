@@ -4,7 +4,13 @@
       "Bash(gh repo create:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(poetry add:*)"
+      "Bash(poetry add:*)",
+      "Bash(aptos account lookup-address:*)",
+      "Bash(aptos account list:*)",
+      "Bash(aptos account show:*)",
+      "Bash(aptos account:*)",
+      "Bash(aptos move compile:*)",
+      "Bash(aptos move test:*)"
     ],
     "deny": [],
     "ask": []

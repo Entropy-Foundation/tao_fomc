@@ -1,0 +1,16 @@
+[package]
+name = "fomc_rates"
+version = "1.0.0"
+authors = []
+
+[addresses]
+fomc_rates = "17c6858cc220757ca5fd9479599af0fb10839e4b30f794733bc06f174c6c674e"
+
+[dev-addresses]
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "mainnet"
+subdir = "aptos-framework"
+
+[dev-dependencies]
