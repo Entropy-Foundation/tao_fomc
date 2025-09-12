@@ -1,0 +1,17 @@
+[project]
+name = "tao-fomc"
+version = "0.1.0"
+description = "FOMC analysis tools"
+authors = [
+    {name = "Entropy Foundation"}
+]
+readme = "README.md"
+requires-python = ">=3.9,<4.0"
+dependencies = [
+    "requests (>=2.32.5,<3.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

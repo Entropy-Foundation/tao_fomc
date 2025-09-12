@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(gh repo create:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(poetry add:*)"
     ],
     "deny": [],
     "ask": []
