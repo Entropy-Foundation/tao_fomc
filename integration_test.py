@@ -15,6 +15,47 @@ from aptos_sdk.type_tag import StructTag, TypeTag
 
 from find_rate_reduction import extract_rate_change_from_text, find_rate_reduction
 from contract_utils import resolve_module_address
+import os
+
+try:
+    from py_ecc.bls import G2ProofOfPossession as bls
+except Exception:
+    bls = None
+
+
+def _load_dotenv(path: str = ".env") -> None:
+    if not os.path.exists(path):
+        return
+    try:
+        with open(path, "r") as f:
+            for line in f:
+                s = line.strip()
+                if not s or s.startswith("#") or "=" not in s:
+                    continue
+                k, v = s.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip())
+    except Exception:
+        pass
+
+
+def _get_bls_keys() -> tuple[int, bytes]:
+    _load_dotenv()
+    priv_hex = os.environ.get("BLS_PRIVATE_KEY")
+    if not priv_hex:
+        raise RuntimeError("BLS_PRIVATE_KEY not set; create a .env or export var")
+    priv_hex = priv_hex.lower().removeprefix("0x")
+    sk = int(priv_hex, 16)
+    if bls is None:
+        raise RuntimeError("py_ecc not installed; cannot sign BLS messages")
+    pk = bls.SkToPk(sk)
+    return sk, bytes(pk)
+
+
+def _bls_message(abs_bps: int, is_increase: bool) -> bytes:
+    s = Serializer()
+    s.u64(abs_bps)
+    s.bool(is_increase)
+    return s.output()
 
 
 # Defaults aligned with your Python examples and Liquidswap Uncorrelated pool
@@ -91,9 +132,13 @@ def decision_from_bps(bps: int) -> tuple[str, int, str, str]:
 
 async def call_move_real_swap(rest: RestClient, account: Account, abs_bps: int, is_increase: bool) -> str:
     module_addr = resolve_module_address("interest_rate")
+    # Prepare BLS signed message
+    sk, pk = _get_bls_keys()
+    msg = _bls_message(abs_bps, is_increase)
+    sig = bls.Sign(sk, msg)
     entry = EntryFunction.natural(
         f"{module_addr}::interest_rate",
-        "record_interest_rate_movement_real",
+        "record_interest_rate_movement_real_signed",
         [
             TypeTag(StructTag.from_str(APT_TYPE)),
             TypeTag(StructTag.from_str(USDT_TYPE)),
@@ -103,6 +148,9 @@ async def call_move_real_swap(rest: RestClient, account: Account, abs_bps: int, 
             TransactionArgument(abs_bps, Serializer.u64),
             TransactionArgument(is_increase, Serializer.bool),
             TransactionArgument(1, Serializer.u64),  # min_out
+            TransactionArgument(list(msg), Serializer.sequence_serializer(Serializer.u8)),
+            TransactionArgument(list(sig), Serializer.sequence_serializer(Serializer.u8)),
+            TransactionArgument(list(pk), Serializer.sequence_serializer(Serializer.u8)),
         ],
     )
     payload = TransactionPayload(entry)

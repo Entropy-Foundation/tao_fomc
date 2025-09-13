@@ -7,6 +7,65 @@ from aptos_sdk.transactions import EntryFunction, TransactionPayload, Transactio
 from aptos_sdk.bcs import Serializer
 from find_rate_reduction import find_rate_reduction, extract_rate_change_from_text
 from contract_utils import resolve_module_address, get_function_id
+import os
+
+try:
+    # Prefer PoP ciphersuite to match Move verifier
+    from py_ecc.bls import G2ProofOfPossession as bls
+except Exception:
+    bls = None  # Will error later if signing is attempted without dependency
+
+
+def _load_dotenv(path: str = ".env") -> None:
+    """Minimal .env loader (KEY=VALUE, ignores comments)."""
+    if not os.path.exists(path):
+        return
+    try:
+        with open(path, "r") as f:
+            for line in f:
+                s = line.strip()
+                if not s or s.startswith("#"):
+                    continue
+                if "=" not in s:
+                    continue
+                k, v = s.split("=", 1)
+                k = k.strip()
+                v = v.strip().strip('"').strip("'")
+                os.environ.setdefault(k, v)
+    except Exception:
+        # Non-fatal; just continue
+        pass
+
+
+def _get_bls_keys() -> tuple[int, bytes]:
+    """Load BLS private key from env and derive public key.
+
+    Returns (sk_int, pk_bytes). Expects `BLS_PRIVATE_KEY` as hex string.
+    """
+    _load_dotenv()
+    priv_hex = os.environ.get("BLS_PRIVATE_KEY")
+    if not priv_hex:
+        raise RuntimeError("BLS_PRIVATE_KEY not set in environment or .env")
+    # Normalize 0x prefix and parse
+    priv_hex = priv_hex.lower().removeprefix("0x")
+    try:
+        sk = int(priv_hex, 16)
+    except Exception as e:
+        raise RuntimeError(f"Invalid BLS_PRIVATE_KEY hex: {e}")
+    if bls is None:
+        raise RuntimeError("py_ecc is not installed; cannot sign BLS messages")
+    pk = bls.SkToPk(sk)
+    if not isinstance(pk, (bytes, bytearray)) or len(pk) != 48:
+        raise RuntimeError("Derived BLS public key is invalid")
+    return sk, bytes(pk)
+
+
+def _bls_message(abs_basis_points: int, is_increase: bool) -> bytes:
+    """Canonical message encoding for on-chain verification: BCS(u64, bool)."""
+    s = Serializer()
+    s.u64(abs_basis_points)
+    s.bool(is_increase)
+    return s.output()
 
 
 class AptosRateSubmitter:
@@ -45,7 +104,7 @@ class AptosRateSubmitter:
             self.rest_client = RestClient(self.rest_url)
             # Resolve deployed module address and function id
             self.module_address = resolve_module_address("interest_rate")
-            self.function_id = get_function_id("record_interest_rate_movement", "interest_rate")
+            self.function_id = get_function_id("record_interest_rate_movement_signed", "interest_rate")
             
             print(f"Loaded account: {self.account.address()}")
             print(f"Connected to: {self.rest_url}")
@@ -71,7 +130,14 @@ class AptosRateSubmitter:
             is_increase = basis_points > 0
             
             print(f"Submitting rate change: {basis_points} basis points")
-            print(f"Contract call: {self.function_id}({abs_basis_points}, {is_increase})")
+            print(f"Contract call: {self.function_id}({abs_basis_points}, {is_increase}, <bls_sig>)")
+
+            # Prepare BLS signature over canonical message
+            sk, pk = _get_bls_keys()
+            msg = _bls_message(abs_basis_points, is_increase)
+            sig = bls.Sign(sk, msg)
+            if not isinstance(sig, (bytes, bytearray)) or len(sig) != 96:
+                raise RuntimeError("BLS signature generation failed")
 
             # BCS encode arguments using serializer instances
             s1 = Serializer()
@@ -85,11 +151,15 @@ class AptosRateSubmitter:
             # Build entry function and payload for the deployed module
             entry_fn = EntryFunction.natural(
                 f"{self.module_address}::interest_rate",
-                "record_interest_rate_movement",
+                "record_interest_rate_movement_signed",
                 [],
                 [
                     TransactionArgument(abs_basis_points, Serializer.u64),
                     TransactionArgument(is_increase, Serializer.bool),
+                    # BLS (message, signature, public_key) as vector<u8>
+                    TransactionArgument(list(msg), Serializer.sequence_serializer(Serializer.u8)),
+                    TransactionArgument(list(sig), Serializer.sequence_serializer(Serializer.u8)),
+                    TransactionArgument(list(pk), Serializer.sequence_serializer(Serializer.u8)),
                 ],
             )
             payload = TransactionPayload(entry_fn)

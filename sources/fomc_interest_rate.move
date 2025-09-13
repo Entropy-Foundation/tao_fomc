@@ -1,10 +1,16 @@
 module fomc_rates::interest_rate {
     use std::signer;
+    use std::option;
     use aptos_framework::event;
     use aptos_framework::timestamp;
     use aptos_framework::coin;
     // No direct acquires of CoinStore outside coin module; only register/check via coin API
     use liquidswap::router;
+    use aptos_std::bls12381;
+
+    /// Error codes for BLS verification
+    const EINVALID_PUBKEY: u64 = 1001;
+    const EVERIFY_FAILED: u64 = 1002;
 
     /// Event emitted for each recorded rate update
     #[event]
@@ -63,6 +69,70 @@ module fomc_rates::interest_rate {
     /// - Decrease >= 50 bps: buy USDT with 30% of APT
     /// - Decrease >= 25 bps: buy USDT with 10% of APT
     /// - Else (no change or increase, or decrease < 25 bps): buy APT with 30% of USDT
+    /// Signed variant that verifies BLS signature before acting
+    public entry fun record_interest_rate_movement_signed(
+        account: &signer,
+        basis_points: u64,
+        is_increase: bool,
+        message: vector<u8>,
+        signature: vector<u8>,
+        public_key: vector<u8>,
+    ) acquires Balances {
+        // Verify BLS signature over the canonical message first
+        assert_bls_sig(message, signature, public_key);
+
+        let now = timestamp::now_microseconds();
+        event::emit(InterestRateChangeEvent { basis_points, is_increase, timestamp: now });
+
+        // Ensure balances exist for the caller
+        init_if_needed(account);
+
+        if (!is_increase && basis_points >= 50) {
+            buy_usdt_with_apt_percent(account, 30)
+        } else if (!is_increase && basis_points >= 25) {
+            buy_usdt_with_apt_percent(account, 10)
+        } else {
+            // No change or increase (or very small decrease): buy APT with 30% of USDT
+            buy_apt_with_usdt_percent(account, 30)
+        }
+    }
+
+    /// Real on-chain swaps via Liquidswap router. Generic over coin types and curve.
+    /// Caller must provide appropriate type args, e.g.,
+    ///   <0x1::aptos_coin::AptosCoin, 0x4341...::coins::USDT, liquidswap::curves::Uncorrelated>
+    /// Signed variant that verifies BLS signature before doing real swaps
+    public entry fun record_interest_rate_movement_real_signed<APT, USDT, Curve>(
+        account: &signer,
+        basis_points: u64,
+        is_increase: bool,
+        min_out: u64,
+        message: vector<u8>,
+        signature: vector<u8>,
+        public_key: vector<u8>,
+    ) {
+        // Verify BLS signature over the canonical message first
+        assert_bls_sig(message, signature, public_key);
+
+        let now = timestamp::now_microseconds();
+        event::emit(InterestRateChangeEvent { basis_points, is_increase, timestamp: now });
+
+        // Ensure CoinStores exist to avoid aborts on first use
+        ensure_registered<APT>(account);
+        ensure_registered<USDT>(account);
+
+        // Ensure the pool exists for selected curve
+        assert!(router::is_swap_exists<APT, USDT, Curve>(), 10);
+
+        if (!is_increase && basis_points >= 50) {
+            swap_apt_to_usdt_percent<APT, USDT, Curve>(account, 30, min_out)
+        } else if (!is_increase && basis_points >= 25) {
+            swap_apt_to_usdt_percent<APT, USDT, Curve>(account, 10, min_out)
+        } else {
+            swap_usdt_to_apt_percent<APT, USDT, Curve>(account, 30, min_out)
+        }
+    }
+
+    /// Backward-compatible entry: original ABI without signature verification.
     public entry fun record_interest_rate_movement(
         account: &signer,
         basis_points: u64,
@@ -84,9 +154,7 @@ module fomc_rates::interest_rate {
         }
     }
 
-    /// Real on-chain swaps via Liquidswap router. Generic over coin types and curve.
-    /// Caller must provide appropriate type args, e.g.,
-    ///   <0x1::aptos_coin::AptosCoin, 0x4341...::coins::USDT, liquidswap::curves::Uncorrelated>
+    /// Backward-compatible entry: original ABI without signature verification.
     public entry fun record_interest_rate_movement_real<APT, USDT, Curve>(
         account: &signer,
         basis_points: u64,
@@ -110,6 +178,17 @@ module fomc_rates::interest_rate {
         } else {
             swap_usdt_to_apt_percent<APT, USDT, Curve>(account, 30, min_out)
         }
+    }
+
+    /// Verifies a BLS signature using Aptos stdlib BLS12-381 implementation.
+    /// Aborts if public key is invalid or verification fails.
+    fun assert_bls_sig(message: vector<u8>, signature: vector<u8>, public_key: vector<u8>) {
+        let pk_opt = bls12381::public_key_from_bytes(public_key);
+        assert!(option::is_some(&pk_opt), EINVALID_PUBKEY);
+        let pk = option::extract(&mut pk_opt);
+        let sig = bls12381::signature_from_bytes(signature);
+        let ok = bls12381::verify_normal_signature(&sig, &pk, message);
+        assert!(ok, EVERIFY_FAILED);
     }
 
     fun init_if_needed(account: &signer) {

@@ -1,15 +1,21 @@
 [package]
-name = "bls_verify"
-version = "1.0.0"
+name = "fomc_rates"
+version = "0.1.0"
 authors = []
 
 [addresses]
+# Overridden at compile/publish time with --named-addresses fomc_rates=<addr>
+fomc_rates = "_"
 
 [dev-addresses]
 
 [dependencies.AptosFramework]
-git = "https://github.com/aptos-labs/aptos-framework.git"
+git = "https://github.com/aptos-labs/aptos-core.git"
 rev = "mainnet"
-subdir = "aptos-framework"
+subdir = "aptos-move/framework/aptos-framework"
+
+# Liquidswap local dependency for router module used by real swaps
+[dependencies.Liquidswap]
+local = "external/liquidswap"
 
 [dev-dependencies]
