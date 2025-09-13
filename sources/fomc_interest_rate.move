@@ -14,7 +14,6 @@ module fomc_rates::interest_rate {
     const EVERIFY_FAILED: u64 = 1002;
     const ENOT_ADMIN: u64 = 2001;
 
-    /// Event emitted for each recorded rate update
     #[event]
     struct InterestRateChangeEvent has drop, store {
         basis_points: u64,
@@ -73,7 +72,6 @@ module fomc_rates::interest_rate {
         vector::length(&cfg.bls_public_key)
     }
 
-    /// Test-only mint function to seed balances (no real coins are moved).
     #[test_only]
     public fun test_mint(account: &signer, apt: u64, usdt: u64) acquires Balances {
         let addr = signer::address_of(account);

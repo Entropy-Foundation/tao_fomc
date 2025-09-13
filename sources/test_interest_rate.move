@@ -92,8 +92,8 @@ module fomc_rates::test_interest_rate {
     #[test(
         aptos_framework = @0x1,
         // Set the package named address and provide matching signer for admin
-        fomc_rates = @0xA11CE,
-        admin = @0xA11CE
+        fomc_rates = @0x42,
+        admin = @0x42
     )]
     fun test_admin_can_set_bls_key(aptos_framework: &signer, admin: &signer) {
         timestamp::set_time_has_started_for_testing(aptos_framework);
@@ -110,12 +110,11 @@ module fomc_rates::test_interest_rate {
 
     #[test(
         aptos_framework = @0x1,
-        fomc_rates = @0xA11CE,
-        admin = @0xA11CE,
+        fomc_rates = @0x42,
         user = @0xB0B
     )]
-    #[expected_failure(abort_code = 2001)]
-    fun test_non_admin_cannot_set_bls_key(aptos_framework: &signer, user: &signer, _admin: &signer) {
+    #[expected_failure(abort_code = 2001, location = fomc_rates::interest_rate)]
+    fun test_non_admin_cannot_set_bls_key(aptos_framework: &signer, user: &signer) {
         timestamp::set_time_has_started_for_testing(aptos_framework);
         let k = vector::empty<u8>();
         vector::push_back(&mut k, 0u8);
@@ -126,8 +125,8 @@ module fomc_rates::test_interest_rate {
 
     #[test(
         aptos_framework = @0x1,
-        fomc_rates = @0xA11CE,
-        admin = @0xA11CE
+        fomc_rates = @0x42,
+        admin = @0x42
     )]
     fun test_admin_can_update_bls_key(aptos_framework: &signer, admin: &signer) {
         timestamp::set_time_has_started_for_testing(aptos_framework);

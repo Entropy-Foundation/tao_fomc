@@ -23,3 +23,6 @@ deploy_logs/
 # Environment files
 .env
 .env.*
+
+# Claude AI
+.claude/
