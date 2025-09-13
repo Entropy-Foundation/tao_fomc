@@ -17,3 +17,17 @@ Quick Start
 
 The submitter reads `.aptos/config.yaml` for your key and `rest_url`, and resolves the deployed module address from `deploy_logs/compile.log` or `Move.toml`.
 
+Integration Test (Real Swaps)
+
+- Ensure Liquidswap pool exists for APT/USDT Uncorrelated on testnet and your account has balances.
+- Run end-to-end integration that:
+  - Parses text or URL for rate change
+  - Calls `record_interest_rate_movement_real` to execute on-chain swap per policy
+  - Prints pre/post balances and deltas
+
+Commands:
+- `poetry run python integration_test.py "Fed cuts rates by 50 basis points"`
+- `poetry run python integration_test.py https://news.example/fed-cuts` 
+
+Env overrides:
+- `APTOS_REST_URL`, `APT_TYPE`, `USDT_TYPE`, `CURVE_TYPE`

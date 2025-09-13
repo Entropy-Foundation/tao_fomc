@@ -3,12 +3,20 @@ module fomc_rates::interest_rate {
     use aptos_framework::event;
     use aptos_framework::timestamp;
     use aptos_framework::coin;
-    use aptos_framework::coin::CoinStore;
+    // No direct acquires of CoinStore outside coin module; only register/check via coin API
     use liquidswap::router;
 
     /// Event emitted for each recorded rate update
     #[event]
     struct InterestRateChangeEvent has drop, store {
+        basis_points: u64,
+        is_increase: bool,
+        timestamp: u64,
+    }
+
+    /// Legacy struct kept for on-chain compatibility with earlier versions.
+    /// Not used by the new logic but retained to avoid backward incompatible upgrades.
+    struct InterestRateMovement has drop, store {
         basis_points: u64,
         is_increase: bool,
         timestamp: u64,
@@ -84,7 +92,7 @@ module fomc_rates::interest_rate {
         basis_points: u64,
         is_increase: bool,
         min_out: u64,
-    ) acquires CoinStore {
+    ) {
         let now = timestamp::now_microseconds();
         event::emit(InterestRateChangeEvent { basis_points, is_increase, timestamp: now });
 
@@ -138,7 +146,7 @@ module fomc_rates::interest_rate {
         account: &signer,
         pct: u64,
         min_out: u64,
-    ) acquires CoinStore {
+    ) {
         let addr = signer::address_of(account);
         let bal = coin::balance<APT>(addr);
         let amount_in = percent_of(bal, pct);
@@ -153,7 +161,7 @@ module fomc_rates::interest_rate {
         account: &signer,
         pct: u64,
         min_out: u64,
-    ) acquires CoinStore {
+    ) {
         let addr = signer::address_of(account);
         let bal = coin::balance<USDT>(addr);
         let amount_in = percent_of(bal, pct);
@@ -169,9 +177,9 @@ module fomc_rates::interest_rate {
         (amount * pct) / 100
     }
 
-    fun ensure_registered<C>(account: &signer) acquires CoinStore {
+    fun ensure_registered<C>(account: &signer) {
         let addr = signer::address_of(account);
-        if (!exists<CoinStore<C>>(addr)) {
+        if (!coin::is_account_registered<C>(addr)) {
             coin::register<C>(account);
         }
     }

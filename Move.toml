@@ -15,8 +15,6 @@ rev = "mainnet"
 subdir = "aptos-framework"
 
 [dependencies.Liquidswap]
-git = "https://github.com/pontem-network/liquidswap.git"
-rev = "main"
-subdir = "liquidswap"
+local = "external/liquidswap"
 
 [dev-dependencies]
