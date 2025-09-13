@@ -35,8 +35,9 @@ class AptosRateSubmitter:
                 config = yaml.safe_load(f)
             
             profile = config['profiles']['default']
-            private_key_hex = profile['private_key'].replace('ed25519-priv-', '')
-            self.account = Account.load_key(private_key_hex)
+            # Use AIP-80 key string directly to avoid SDK warning
+            private_key_value = profile['private_key']
+            self.account = Account.load_key(private_key_value)
             self.rest_url = profile['rest_url']
             # Normalize REST URL to include /v1 suffix expected by Aptos nodes
             if not self.rest_url.rstrip("/").endswith("/v1"):
