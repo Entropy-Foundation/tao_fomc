@@ -17,6 +17,25 @@ Quick Start
 
 The submitter reads `.aptos/config.yaml` for your key and `rest_url`, and resolves the deployed module address from `deploy_logs/compile.log` or `Move.toml`.
 
+Environment
+
+- Copy `env.template` to `.env` and fill in values (at minimum `BLS_PRIVATE_KEY`; optional overrides like `APTOS_REST_URL`, `APT_TYPE`, `USDT_TYPE`, `CURVE_TYPE`). `.env` is already git-ignored.
+
+Automatic Trading
+
+- **Policy:** Executes swaps based on the reported rate change.
+  - Decrease ≥ 50 bps: buy USDT with 30% of APT.
+  - Decrease ≥ 25 bps: buy USDT with 10% of APT.
+  - Otherwise (no change, increase, or small cut): buy APT with 30% of USDT.
+- **Real swaps:** `record_interest_rate_movement_real_signed<APT, USDT, Curve>` routes through Liquidswap; pools must exist and accounts must be registered for both coins.
+- **Test mode:** `record_interest_rate_movement_signed` uses an internal ledger for validation (no DEX swap).
+
+BLS Verification
+
+- **Signed calls:** The Python submitter uses `record_interest_rate_movement_signed` / `record_interest_rate_movement_real_signed` by default.
+- **Canonical message:** BCS-encoded `(u64 basis_points_abs, bool is_increase)` is signed with `py_ecc` (BLS12-381 G2 PoP).
+- **On-chain check:** The Move module verifies `message`, `signature`, and `public_key` using Aptos `aptos_std::bls12381::verify_normal_signature` before emitting events or executing swaps.
+
 Integration Test (Real Swaps)
 
 - Ensure Liquidswap pool exists for APT/USDT Uncorrelated on testnet and your account has balances.

@@ -7,10 +7,12 @@ module fomc_rates::interest_rate {
     // No direct acquires of CoinStore outside coin module; only register/check via coin API
     use liquidswap::router;
     use aptos_std::bls12381;
+    use std::vector;
 
     /// Error codes for BLS verification
     const EINVALID_PUBKEY: u64 = 1001;
     const EVERIFY_FAILED: u64 = 1002;
+    const ENOT_ADMIN: u64 = 2001;
 
     /// Event emitted for each recorded rate update
     #[event]
@@ -18,6 +20,12 @@ module fomc_rates::interest_rate {
         basis_points: u64,
         is_increase: bool,
         timestamp: u64,
+    }
+
+    /// Module configuration stored under the module address containing the active BLS public key.
+    /// This is updated only by the module admin (publisher address of `fomc_rates`).
+    struct Config has key {
+        bls_public_key: vector<u8>,
     }
 
     /// Legacy struct kept for on-chain compatibility with earlier versions.
@@ -42,6 +50,27 @@ module fomc_rates::interest_rate {
         if (!exists<Balances>(addr)) {
             move_to(account, Balances { apt: 0, usdt: 0 });
         }
+    }
+
+    /// Admin-only: create or update the module's BLS public key used for signature verification.
+    /// Stores the key in `Config` under the `@fomc_rates` address.
+    public entry fun set_bls_public_key(admin: &signer, new_key: vector<u8>) acquires Config {
+        // Only the module admin (publisher address of `fomc_rates`) may set the key.
+        assert!(signer::address_of(admin) == @fomc_rates, ENOT_ADMIN);
+        if (exists<Config>(@fomc_rates)) {
+            let cfg = borrow_global_mut<Config>(@fomc_rates);
+            cfg.bls_public_key = new_key;
+        } else {
+            move_to(admin, Config { bls_public_key: new_key });
+        }
+    }
+
+    /// Read-only helpers to support unit tests and potential off-chain checks
+    public fun has_bls_public_key(): bool { exists<Config>(@fomc_rates) }
+
+    public fun bls_public_key_len(): u64 acquires Config {
+        let cfg = borrow_global<Config>(@fomc_rates);
+        vector::length(&cfg.bls_public_key)
     }
 
     /// Test-only mint function to seed balances (no real coins are moved).
