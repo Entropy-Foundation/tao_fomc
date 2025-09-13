@@ -10,7 +10,9 @@
       "Bash(aptos account show:*)",
       "Bash(aptos account:*)",
       "Bash(aptos move compile:*)",
-      "Bash(aptos move test:*)"
+      "Bash(aptos move test:*)",
+      "Bash(poetry run python:*)",
+      "Read(//Users/yinyang/.aptos/**)"
     ],
     "deny": [],
     "ask": []
