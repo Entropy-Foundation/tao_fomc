@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 import json
 import logging
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_article_text(url):
     """
@@ -33,7 +33,7 @@ def warmup():
     messages = []
 
     # 1. Initial prompt
-    initial_prompt = "I’ll give you an official statement from FOMC. Based on this statement, please tell me: (1) Whether this article is about interest rate cut / increase. You answer must be either Yes or No, and nothing else. I’ll give you the statement shortly."
+    initial_prompt = "I'll give you an official statement from FOMC. Based on this statement, please tell me: (1) Whether this article describes a Federal Reserve decision about interest rates (including cuts, increases, or maintaining current rates). Your answer must be either Yes or No, and nothing else. I'll give you the statement shortly."
     messages.append({'role': 'user', 'content': initial_prompt})
     
     response = ollama.chat(model='gemma3:4b', messages=messages)
@@ -61,7 +61,7 @@ def extract(article_text, messages):
         return None
 
     # 4. Ask for the exact sentence
-    sentence_prompt = "Tell me the exact sentence that explicitly mentions interest rate movement."
+    sentence_prompt = "Tell me the exact sentence that explicitly mentions the Federal Reserve's interest rate decision (whether it's a cut, increase, or maintaining current rates)."
     messages.append({'role': 'user', 'content': sentence_prompt})
     response = ollama.chat(model='gemma3:4b', messages=messages)
     assistant_response = response['message']['content']
@@ -69,9 +69,9 @@ def extract(article_text, messages):
     messages.append({'role': 'assistant', 'content': assistant_response})
 
     # 5. Ask for the basis points in JSON format
-    basis_points_prompt = """Based on your answer above, analyze the interest rate change and provide your answer in a JSON format with two keys:
-1. "direction": The value should be either "increase" or "decrease".
-2. "basis_points": The value should be the number of basis points of the change (e.g., 50 for a 0.50% change).
+    basis_points_prompt = """Based on your answer above, analyze the Federal Reserve's interest rate decision and provide your answer in a JSON format with two keys:
+1. "direction": The value should be either "increase", "decrease", or "maintain" (if rates are kept at current levels).
+2. "basis_points": The value should be the number of basis points of the change (e.g., 50 for a 0.50% change, or 0 if rates are maintained).
 
 Your response should only be the JSON object."""
     messages.append({'role': 'user', 'content': basis_points_prompt})
@@ -89,6 +89,8 @@ Your response should only be the JSON object."""
 
         if direction == "decrease":
             basis_points = -basis_points
+        elif direction == "maintain":
+            basis_points = 0
         
         return basis_points
 
