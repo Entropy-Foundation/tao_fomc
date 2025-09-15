@@ -61,7 +61,7 @@ def extract(article_text, messages):
         return None
 
     # 4. Ask for the exact sentence
-    sentence_prompt = "Tell me the exact sentnece that explicitly mentions interest rate movement."
+    sentence_prompt = "Tell me the exact sentence that explicitly mentions interest rate movement."
     messages.append({'role': 'user', 'content': sentence_prompt})
     response = ollama.chat(model='gemma3:4b', messages=messages)
     assistant_response = response['message']['content']

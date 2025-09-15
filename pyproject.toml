@@ -18,7 +18,6 @@ dependencies = [
 
 
 [project.scripts]
-fomc-submit = "aptos_rate_submitter:cli"
 fomc-verify = "verify_tx:cli"
 
 

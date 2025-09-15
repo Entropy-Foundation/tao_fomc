@@ -13,8 +13,9 @@ from aptos_sdk.bcs import Serializer
 from aptos_sdk.transactions import EntryFunction, TransactionArgument, TransactionPayload
 from aptos_sdk.type_tag import StructTag, TypeTag
 
-from find_rate_reduction import extract_rate_change_from_text, find_rate_reduction
+from find_rate_reduction import find_rate_reduction
 from contract_utils import resolve_module_address
+from chat import warmup, extract, get_article_text
 import os
 
 try:
@@ -166,13 +167,46 @@ async def call_move_real_swap(rest: RestClient, account: Account, abs_bps: int, 
     return txh
 
 
+def extract_rate_change_from_text_llm(text: str) -> Optional[int]:
+    """
+    Extracts interest rate change from text using LLM approach.
+    
+    Args:
+        text: The text to parse for rate changes.
+        
+    Returns:
+        The rate change in basis points as an integer (negative for reductions,
+        positive for increases), or None if not found.
+    """
+    try:
+        # Warm up the LLM
+        messages = warmup()
+        # Extract rate change using LLM
+        return extract(text, messages)
+    except Exception as e:
+        print(f"Error using LLM approach: {e}")
+        return None
+
+
 async def run_integration(input_text_or_url: str):
     # 1) Extract basis points
     if input_text_or_url.startswith("http://") or input_text_or_url.startswith("https://"):
-        bps = find_rate_reduction(input_text_or_url)
+        # For URLs, we can use either the existing regex approach or LLM approach
+        # Let's use LLM approach for consistency
+        try:
+            article_text = get_article_text(input_text_or_url)
+            if article_text:
+                messages = warmup()
+                bps = extract(article_text, messages)
+            else:
+                # Fallback to the original approach if article extraction fails
+                bps = find_rate_reduction(input_text_or_url)
+        except Exception as e:
+            print(f"Error with LLM approach, falling back to regex: {e}")
+            bps = find_rate_reduction(input_text_or_url)
         source = input_text_or_url
     else:
-        bps = extract_rate_change_from_text(input_text_or_url)
+        bps = extract_rate_change_from_text_llm(input_text_or_url)
         source = "inline-text"
     if bps is None:
         print("❌ Could not detect a rate change from input")
