@@ -179,6 +179,7 @@ def extract_rate_change_from_text_llm(text: str) -> Optional[int]:
 
 def simulate_threshold_signing_servers(
     private_keys: Dict[int, bytes],
+    public_keys: Dict[int, bytes],
     bcs_message: bytes,
     participating_servers: List[int]
 ) -> Dict[int, bytes]:
@@ -187,10 +188,12 @@ def simulate_threshold_signing_servers(
     In a real deployment, each server would:
     1. Receive the BCS message
     2. Generate their partial signature using their private key share
-    3. Send the partial signature to a coordinator
+    3. Verify their partial signature using their public key
+    4. Send the partial signature to a coordinator
     
     Args:
         private_keys: Dict mapping server ID to private key bytes
+        public_keys: Dict mapping server ID to public key bytes
         bcs_message: The BCS message to sign
         participating_servers: List of server IDs that will participate
     
@@ -205,12 +208,19 @@ def simulate_threshold_signing_servers(
         for server_id in participating_servers
     }
     
+    # Extract only the participating servers' public keys
+    participating_public_keys = {
+        server_id: public_keys[server_id]
+        for server_id in participating_servers
+    }
+    
     # Generate all threshold signatures at once (this simulates the coordination)
     print(f"🔗 Coordinating threshold signatures from servers: {participating_servers}")
     threshold_signatures = generate_threshold_signatures(
         participating_private_keys,
         bcs_message,
-        participating_servers
+        participating_servers,
+        participating_public_keys
     )
     
     # Simulate each server contributing their signature
@@ -285,7 +295,7 @@ async def run_threshold_integration(input_text_or_url: str):
     
     # Simulate each server generating their partial signature
     partial_signatures = simulate_threshold_signing_servers(
-        private_keys, bcs_message, participating_servers
+        private_keys, public_keys, bcs_message, participating_servers
     )
     
     # 5) Combine partial signatures into threshold signature

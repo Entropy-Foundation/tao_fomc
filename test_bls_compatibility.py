@@ -46,6 +46,23 @@ def test_single_signature_compatibility():
     py_ecc_verify_result = verify_signature(public_key_bytes, bcs_message, py_ecc_signature_bytes)
     print(f"py_ecc signature verified by our function: {py_ecc_verify_result}")
     
+    # Test direct py_ecc verification for comparison
+    print(f"\n=== DIRECT PY_ECC VERIFICATION TEST ===")
+    try:
+        # Direct verification using py_ecc with public key point and signature point
+        direct_verify_result = bls.Verify(public_key_point, bcs_message, py_ecc_signature)
+        print(f"Direct py_ecc verification (pubkey_point, message, sig_point): {direct_verify_result}")
+        
+        # Also test with bytes directly (should fail but let's see the error)
+        try:
+            direct_verify_bytes = bls.Verify(public_key_bytes, bcs_message, py_ecc_signature_bytes)
+            print(f"Direct py_ecc verification (pubkey_bytes, message, sig_bytes): {direct_verify_bytes}")
+        except Exception as e2:
+            print(f"Direct py_ecc verification with bytes failed (expected): {e2}")
+        
+    except Exception as e:
+        print(f"Direct py_ecc verification error: {e}")
+    
     # Check if signatures are identical
     signatures_match = our_signature == py_ecc_signature_bytes
     print(f"Signatures match: {signatures_match}")
