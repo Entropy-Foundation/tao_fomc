@@ -154,39 +154,44 @@ def create_bcs_message_for_fomc(abs_bps: int, is_increase: bool) -> bytes:
     return bcs_bytes
 
 def sign_bcs_message(private_key_bytes: bytes, bcs_message: bytes) -> bytes:
-    """Sign BCS-serialized message bytes using a private key."""
-    # Hash BCS message to G2 point
-    H = hash_to_G2(bcs_message, DST, hashlib.sha256)  # type: ignore
-    
-    # Convert private key to scalar
-    private_key_scalar = int.from_bytes(private_key_bytes, 'big')
-    
-    # Sign: signature = private_key * H(bcs_message)
-    signature_point = multiply(H, private_key_scalar)
-    
-    # Convert to compressed bytes (96 bytes)
-    signature_bytes = G2_to_signature(signature_point)
-    
-    return signature_bytes
+    """Sign BCS-serialized message bytes using a private key - Aptos compatible."""
+    try:
+        # Use the same BLS import as the original integration test (ignore Pylance error)
+        from py_ecc.bls import G2ProofOfPossession as bls  # type: ignore
+        
+        # Convert private key bytes to integer
+        private_key_scalar = int.from_bytes(private_key_bytes, 'big')
+        
+        # Use the same signing method as the original integration test
+        signature_bytes = bls.Sign(private_key_scalar, bcs_message)  # type: ignore
+        
+        return bytes(signature_bytes)
+        
+    except Exception as e:
+        print(f"BLS signing error: {e}")
+        # Fallback to manual implementation
+        H = hash_to_G2(bcs_message, DST, hashlib.sha256)  # type: ignore
+        private_key_scalar = int.from_bytes(private_key_bytes, 'big')
+        signature_point = multiply(H, private_key_scalar)
+        signature_bytes = G2_to_signature(signature_point)
+        return signature_bytes
 
 def verify_signature(public_key_bytes: bytes, bcs_message: bytes, signature_bytes: bytes) -> bool:
     """Verify a signature against a public key and BCS message bytes."""
     try:
-        # Hash BCS message to G2 point
-        H = hash_to_G2(bcs_message, DST, hashlib.sha256)  # type: ignore
-        
-        # Reconstruct public key point from bytes
+        # Use the same BLS import as the original integration test (ignore Pylance error)
+        from py_ecc.bls import G2ProofOfPossession as bls  # type: ignore
         from py_ecc.bls.g2_primitives import pubkey_to_G1, signature_to_G2
         
-        # Convert bytes to proper types
+        # Convert bytes to G1/G2 points
         public_key_point = pubkey_to_G1(public_key_bytes)  # type: ignore
         signature_point = signature_to_G2(signature_bytes)  # type: ignore
         
-        # Verify: e(H(bcs_message), public_key) == e(signature, G1)
-        return pairing(H, public_key_point) == pairing(signature_point, G1)
+        # Use py_ecc's verification logic (same as original integration test would use)
+        return bls.Verify(public_key_point, bcs_message, signature_point)  # type: ignore
         
     except Exception as e:
-        print(f"BCS verification error: {e}")
+        print(f"BLS verification error: {e}")
         return False
 
 def generate_threshold_signatures(private_keys: Dict[int, bytes], bcs_message: bytes,
