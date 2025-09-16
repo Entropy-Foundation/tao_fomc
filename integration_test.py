@@ -19,7 +19,7 @@ from chat import warmup, extract, get_article_text
 import os
 
 try:
-    from py_ecc.bls import G2ProofOfPossession as bls
+    from py_ecc.bls.ciphersuites import G2ProofOfPossession as bls
 except Exception:
     bls = None
 
@@ -131,6 +131,26 @@ def decision_from_bps(bps: int) -> tuple[str, int, str, str]:
         return ("Increase: buy APT with 30% of USDT", 30, USDT_TYPE, APT_TYPE)
 
 
+async def set_bls_public_key(rest: RestClient, account: Account) -> str:
+    """Set the BLS public key in the contract before calling the main function."""
+    module_addr = resolve_module_address("interest_rate")
+    sk, pk = _get_bls_keys()
+    
+    entry = EntryFunction.natural(
+        f"{module_addr}::interest_rate",
+        "set_bls_public_key",
+        [],
+        [
+            TransactionArgument(list(pk), Serializer.sequence_serializer(Serializer.u8)),
+        ],
+    )
+    payload = TransactionPayload(entry)
+    signed = await rest.create_bcs_signed_transaction(account, payload)
+    txh = await rest.submit_bcs_transaction(signed)
+    await rest.wait_for_transaction(txh)
+    return txh
+
+
 async def call_move_real_swap(rest: RestClient, account: Account, abs_bps: int, is_increase: bool) -> str:
     module_addr = resolve_module_address("interest_rate")
     # Prepare BLS signed message
@@ -139,19 +159,15 @@ async def call_move_real_swap(rest: RestClient, account: Account, abs_bps: int, 
     sig = bls.Sign(sk, msg)
     entry = EntryFunction.natural(
         f"{module_addr}::interest_rate",
-        "record_interest_rate_movement_real_signed",
+        "record_interest_rate_movement_v5",
         [
             TypeTag(StructTag.from_str(APT_TYPE)),
             TypeTag(StructTag.from_str(USDT_TYPE)),
-            TypeTag(StructTag.from_str(CURVE_TYPE)),
         ],
         [
             TransactionArgument(abs_bps, Serializer.u64),
             TransactionArgument(is_increase, Serializer.bool),
-            TransactionArgument(1, Serializer.u64),  # min_out
-            TransactionArgument(list(msg), Serializer.sequence_serializer(Serializer.u8)),
             TransactionArgument(list(sig), Serializer.sequence_serializer(Serializer.u8)),
-            TransactionArgument(list(pk), Serializer.sequence_serializer(Serializer.u8)),
         ],
     )
     payload = TransactionPayload(entry)
@@ -227,11 +243,15 @@ async def run_integration(input_text_or_url: str):
         to_before = await balance(rest, addr, to_coin)
         print(f"Before: from={from_before} to={to_before}")
 
-        # 4) Call Move entry to execute real swap based on policy
+        # 4) Set BLS public key in the contract first
+        key_txh = await set_bls_public_key(rest, account)
+        print(f"✅ BLS public key set. Tx: {key_txh}")
+
+        # 5) Call Move entry to execute real swap based on policy
         txh = await call_move_real_swap(rest, account, abs_bps, is_increase)
         print(f"✅ On-chain action executed. Tx: {txh}")
 
-        # 5) Read balances after
+        # 6) Read balances after
         from_after = await balance(rest, addr, from_coin)
         to_after = await balance(rest, addr, to_coin)
         print(f"After:  from={from_after} to={to_after}")

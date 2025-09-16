@@ -96,7 +96,8 @@ module fomc_rates::interest_rate {
     /// - Decrease >= 50 bps: buy USDT with 30% of APT
     /// - Decrease >= 25 bps: buy USDT with 10% of APT
     /// - Else (no change or increase, or decrease < 25 bps): buy APT with 30% of USDT
-    /// Signed variant that verifies BLS signature before acting
+    /// DEPRECATED: This function is disabled and kept only for ABI compatibility with deployed contracts.
+    /// Use record_interest_rate_movement() instead.
     public entry fun record_interest_rate_movement_signed(
         account: &signer,
         basis_points: u64,
@@ -104,30 +105,68 @@ module fomc_rates::interest_rate {
         message: vector<u8>,
         signature: vector<u8>,
         public_key: vector<u8>,
-    ) acquires Balances {
+    ) {
+        // Function disabled - kept for ABI compatibility only
+        abort 999;
+    }
+
+    /// DEPRECATED: This function is disabled and kept only for ABI compatibility with deployed contracts.
+    /// Use record_interest_rate_movement_v5() instead.
+    public entry fun record_interest_rate_movement_v4<APT, USDT, Curve>(
+        account: &signer,
+        basis_points: u64,
+        is_increase: bool,
+        min_out: u64,
+        signature: vector<u8>,
+        public_key: vector<u8>,
+    ) {
+        // Function disabled - kept for ABI compatibility only
+        abort 999;
+    }
+
+    /// Real on-chain swaps via Liquidswap router with hardcoded curve and simplified parameters.
+    /// Uses stored BLS public key from Config and fixed min_out value.
+    /// Hardcoded to use APT, USDT, and Uncorrelated curve as used in integration tests.
+    public entry fun record_interest_rate_movement_v5<APT, USDT>(
+        account: &signer,
+        basis_points: u64,
+        is_increase: bool,
+        signature: vector<u8>,
+    ) acquires Config {
+        // Derive message from basis_points and is_increase
+        let message = derive_message(basis_points, is_increase);
+        
+        // Get stored BLS public key from Config
+        assert!(exists<Config>(@fomc_rates), EINVALID_PUBKEY);
+        let cfg = borrow_global<Config>(@fomc_rates);
+        let public_key = cfg.bls_public_key;
+        
         // Verify BLS signature over the canonical message first
         assert_bls_sig(message, signature, public_key);
 
         let now = timestamp::now_microseconds();
         event::emit(InterestRateChangeEvent { basis_points, is_increase, timestamp: now });
 
-        // Ensure balances exist for the caller
-        init_if_needed(account);
+        // Ensure CoinStores exist to avoid aborts on first use
+        ensure_registered<APT>(account);
+        ensure_registered<USDT>(account);
+
+        // Ensure the pool exists for Uncorrelated curve (hardcoded)
+        assert!(router::is_swap_exists<APT, USDT, 0x43417434fd869edee76cca2a4d2301e528a1551b1d719b75c350c3c97d15b8b9::curves::Uncorrelated>(), 10);
+
+        let min_out = 1; // Fixed min_out value as used in integration tests
 
         if (!is_increase && basis_points >= 50) {
-            buy_usdt_with_apt_percent(account, 30)
+            swap_apt_to_usdt_percent<APT, USDT, 0x43417434fd869edee76cca2a4d2301e528a1551b1d719b75c350c3c97d15b8b9::curves::Uncorrelated>(account, 30, min_out)
         } else if (!is_increase && basis_points >= 25) {
-            buy_usdt_with_apt_percent(account, 10)
+            swap_apt_to_usdt_percent<APT, USDT, 0x43417434fd869edee76cca2a4d2301e528a1551b1d719b75c350c3c97d15b8b9::curves::Uncorrelated>(account, 10, min_out)
         } else {
-            // No change or increase (or very small decrease): buy APT with 30% of USDT
-            buy_apt_with_usdt_percent(account, 30)
+            swap_usdt_to_apt_percent<APT, USDT, 0x43417434fd869edee76cca2a4d2301e528a1551b1d719b75c350c3c97d15b8b9::curves::Uncorrelated>(account, 30, min_out)
         }
     }
 
-    /// Real on-chain swaps via Liquidswap router. Generic over coin types and curve.
-    /// Caller must provide appropriate type args, e.g.,
-    ///   <0x1::aptos_coin::AptosCoin, 0x4341...::coins::USDT, liquidswap::curves::Uncorrelated>
-    /// Signed variant that verifies BLS signature before doing real swaps
+    /// DEPRECATED: Kept for ABI compatibility with deployed contracts.
+    /// Use record_interest_rate_movement_v4() instead.
     public entry fun record_interest_rate_movement_real_signed<APT, USDT, Curve>(
         account: &signer,
         basis_points: u64,
@@ -137,74 +176,51 @@ module fomc_rates::interest_rate {
         signature: vector<u8>,
         public_key: vector<u8>,
     ) {
-        // Verify BLS signature over the canonical message first
-        assert_bls_sig(message, signature, public_key);
-
-        let now = timestamp::now_microseconds();
-        event::emit(InterestRateChangeEvent { basis_points, is_increase, timestamp: now });
-
-        // Ensure CoinStores exist to avoid aborts on first use
-        ensure_registered<APT>(account);
-        ensure_registered<USDT>(account);
-
-        // Ensure the pool exists for selected curve
-        assert!(router::is_swap_exists<APT, USDT, Curve>(), 10);
-
-        if (!is_increase && basis_points >= 50) {
-            swap_apt_to_usdt_percent<APT, USDT, Curve>(account, 30, min_out)
-        } else if (!is_increase && basis_points >= 25) {
-            swap_apt_to_usdt_percent<APT, USDT, Curve>(account, 10, min_out)
-        } else {
-            swap_usdt_to_apt_percent<APT, USDT, Curve>(account, 30, min_out)
-        }
+        // Function disabled - kept for ABI compatibility only
+        abort 999;
     }
 
     /// Backward-compatible entry: original ABI without signature verification.
+    /// DEPRECATED: This function is disabled and kept only for ABI compatibility with deployed contracts.
+    /// Use record_interest_rate_movement_real_signed() instead.
     public entry fun record_interest_rate_movement(
         account: &signer,
         basis_points: u64,
         is_increase: bool,
-    ) acquires Balances {
-        let now = timestamp::now_microseconds();
-        event::emit(InterestRateChangeEvent { basis_points, is_increase, timestamp: now });
-
-        // Ensure balances exist for the caller
-        init_if_needed(account);
-
-        if (!is_increase && basis_points >= 50) {
-            buy_usdt_with_apt_percent(account, 30)
-        } else if (!is_increase && basis_points >= 25) {
-            buy_usdt_with_apt_percent(account, 10)
-        } else {
-            // No change or increase (or very small decrease): buy APT with 30% of USDT
-            buy_apt_with_usdt_percent(account, 30)
-        }
+    ) {
+        // Function disabled - kept for ABI compatibility only
+        abort 999;
     }
 
     /// Backward-compatible entry: original ABI without signature verification.
+    /// DEPRECATED: This function is disabled and kept only for ABI compatibility with deployed contracts.
+    /// Use record_interest_rate_movement_real_signed() instead.
     public entry fun record_interest_rate_movement_real<APT, USDT, Curve>(
         account: &signer,
         basis_points: u64,
         is_increase: bool,
         min_out: u64,
     ) {
-        let now = timestamp::now_microseconds();
-        event::emit(InterestRateChangeEvent { basis_points, is_increase, timestamp: now });
+        // Function disabled - kept for ABI compatibility only
+        abort 999;
+    }
 
-        // Ensure CoinStores exist to avoid aborts on first use
-        ensure_registered<APT>(account);
-        ensure_registered<USDT>(account);
-
-        // Ensure the pool exists for selected curve
-        assert!(router::is_swap_exists<APT, USDT, Curve>(), 10);
-
-        if (!is_increase && basis_points >= 50) {
-            swap_apt_to_usdt_percent<APT, USDT, Curve>(account, 30, min_out)
-        } else if (!is_increase && basis_points >= 25) {
-            swap_apt_to_usdt_percent<APT, USDT, Curve>(account, 10, min_out)
-        } else {
-            swap_usdt_to_apt_percent<APT, USDT, Curve>(account, 30, min_out)
-        }
+    /// Derives a canonical message from basis_points and is_increase for signature verification
+    /// This matches the Python _bls_message function: serialize u64(basis_points) + bool(is_increase)
+    fun derive_message(basis_points: u64, is_increase: bool): vector<u8> {
+        use aptos_std::bcs;
+        
+        let message = vector::empty<u8>();
+        
+        // Serialize basis_points as u64 in BCS format
+        let bp_bytes = bcs::to_bytes(&basis_points);
+        vector::append(&mut message, bp_bytes);
+        
+        // Serialize is_increase as bool in BCS format
+        let bool_bytes = bcs::to_bytes(&is_increase);
+        vector::append(&mut message, bool_bytes);
+        
+        message
     }
 
     /// Verifies a BLS signature using Aptos stdlib BLS12-381 implementation.

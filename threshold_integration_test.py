@@ -33,7 +33,7 @@ from threshold_signing import (
     generate_threshold_signatures,
     combine_threshold_signatures,
     verify_signature,
-    N, T
+    get_n, get_t, set_threshold_config
 )
 
 try:
@@ -110,10 +110,29 @@ def decision_from_bps(bps: int) -> tuple[str, int, str, str]:
         return ("Increase: buy APT with 30% of USDT", 30, USDT_TYPE, APT_TYPE)
 
 
+async def set_bls_public_key_threshold(rest: RestClient, account: Account, group_public_key: bytes) -> str:
+    """Set the BLS public key in the contract before calling the main function."""
+    module_addr = resolve_module_address("interest_rate")
+    
+    entry = EntryFunction.natural(
+        f"{module_addr}::interest_rate",
+        "set_bls_public_key",
+        [],
+        [
+            TransactionArgument(list(group_public_key), Serializer.sequence_serializer(Serializer.u8)),
+        ],
+    )
+    payload = TransactionPayload(entry)
+    signed = await rest.create_bcs_signed_transaction(account, payload)
+    txh = await rest.submit_bcs_transaction(signed)
+    await rest.wait_for_transaction(txh)
+    return txh
+
+
 async def call_move_real_swap_threshold(
-    rest: RestClient, 
-    account: Account, 
-    abs_bps: int, 
+    rest: RestClient,
+    account: Account,
+    abs_bps: int,
     is_increase: bool,
     threshold_signature: bytes,
     group_public_key: bytes
@@ -128,19 +147,15 @@ async def call_move_real_swap_threshold(
     
     entry = EntryFunction.natural(
         f"{module_addr}::interest_rate",
-        "record_interest_rate_movement_real_signed",
+        "record_interest_rate_movement_v5",
         [
             TypeTag(StructTag.from_str(APT_TYPE)),
             TypeTag(StructTag.from_str(USDT_TYPE)),
-            TypeTag(StructTag.from_str(CURVE_TYPE)),
         ],
         [
             TransactionArgument(abs_bps, Serializer.u64),
             TransactionArgument(is_increase, Serializer.bool),
-            TransactionArgument(1, Serializer.u64),  # min_out
-            TransactionArgument(list(msg), Serializer.sequence_serializer(Serializer.u8)),
             TransactionArgument(list(threshold_signature), Serializer.sequence_serializer(Serializer.u8)),
-            TransactionArgument(list(group_public_key), Serializer.sequence_serializer(Serializer.u8)),
         ],
     )
     payload = TransactionPayload(entry)
@@ -236,20 +251,21 @@ async def run_threshold_integration(input_text_or_url: str):
     Run the threshold signing integration test.
     
     This simulates the complete flow:
-    1. Generate threshold keys for 4 FOMC servers
+    1. Generate threshold keys for configurable FOMC servers
     2. Extract rate change from input
-    3. Have 3 servers create partial signatures
+    3. Have threshold number of servers create partial signatures
     4. Combine partial signatures into threshold signature
     5. Execute on-chain transaction with threshold signature
     """
     print("🚀 Starting FOMC Threshold Signing Integration Test")
-    print(f"📊 Configuration: {N} servers, {T}-of-{N} threshold")
+    n, t = get_n(), get_t()
+    print(f"📊 Configuration: {n} servers, {t}-of-{n} threshold")
     
     # 1) Generate threshold keys for FOMC servers
     print("\n=== THRESHOLD KEY GENERATION ===")
     private_keys, public_keys, group_public_key = generate_threshold_keys()
     
-    print(f"✅ Generated keys for {N} FOMC servers")
+    print(f"✅ Generated keys for {n} FOMC servers")
     print(f"🔑 Group public key: {group_public_key.hex()[:32]}...")
     
     # 2) Extract basis points from input
@@ -288,9 +304,9 @@ async def run_threshold_integration(input_text_or_url: str):
     print(f"📝 BCS message: {bcs_message.hex()}")
     print(f"📊 Message content: {abs_bps} bps, {'increase' if is_increase else 'decrease'}")
 
-    # 4) Simulate threshold signing with 3 out of 4 servers
+    # 4) Simulate threshold signing with t out of n servers
     print(f"\n=== THRESHOLD SIGNING SIMULATION ===")
-    participating_servers = [1, 2, 3]  # Use servers 1, 2, 3 (any 3 would work)
+    participating_servers = list(range(1, t + 1))  # Use first t servers (any t would work)
     print(f"🖥️  Participating servers: {participating_servers}")
     
     # Simulate each server generating their partial signature
@@ -318,6 +334,10 @@ async def run_threshold_integration(input_text_or_url: str):
         to_before = await balance(rest, addr, to_coin)
         print(f"💰 Before: from={from_before} to={to_before}")
 
+        # Set BLS public key in the contract first
+        key_txh = await set_bls_public_key_threshold(rest, account, group_public_key)
+        print(f"✅ BLS group public key set. Tx: {key_txh}")
+
         # Execute on-chain transaction with threshold signature
         txh = await call_move_real_swap_threshold(
             rest, account, abs_bps, is_increase, threshold_signature, group_public_key
@@ -332,7 +352,7 @@ async def run_threshold_integration(input_text_or_url: str):
         print(f"📊 Δ to:   {to_after - to_before}")
         
         print(f"\n🎉 THRESHOLD SIGNING INTEGRATION TEST COMPLETED SUCCESSFULLY!")
-        print(f"✅ {T} out of {N} FOMC servers successfully signed the rate change")
+        print(f"✅ {t} out of {n} FOMC servers successfully signed the rate change")
         print(f"✅ Threshold signature verified against group public key")
         print(f"✅ On-chain transaction executed with threshold signature")
         
@@ -342,20 +362,40 @@ async def run_threshold_integration(input_text_or_url: str):
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python threshold_integration_test.py <url-or-text>")
+    # Parse command line arguments for threshold configuration
+    if len(sys.argv) >= 4:
+        try:
+            n = int(sys.argv[1])
+            t = int(sys.argv[2])
+            set_threshold_config(n, t)
+            input_text = " ".join(sys.argv[3:]).strip()
+        except ValueError as e:
+            print(f"Error: {e}")
+            print("Usage: python threshold_integration_test.py [N] [T] <url-or-text>")
+            print("       python threshold_integration_test.py <url-or-text>")
+            print("Examples:")
+            print("  python threshold_integration_test.py 7 5 https://example.com/fed-cuts")
+            print("  python threshold_integration_test.py https://example.com/fed-cuts")
+            print('  python threshold_integration_test.py "Fed cuts rates by 50 basis points"')
+            sys.exit(1)
+    elif len(sys.argv) >= 2:
+        input_text = " ".join(sys.argv[1:]).strip()
+    else:
+        print("Usage: python threshold_integration_test.py [N] [T] <url-or-text>")
+        print("       python threshold_integration_test.py <url-or-text>")
         print("Examples:")
+        print("  python threshold_integration_test.py 7 5 https://example.com/fed-cuts")
         print("  python threshold_integration_test.py https://example.com/fed-cuts")
         print('  python threshold_integration_test.py "Fed cuts rates by 50 basis points"')
         print("\nThis test demonstrates threshold signing where:")
-        print(f"- {N} FOMC servers hold private key shares")
-        print(f"- Any {T} servers can create a valid threshold signature")
+        n, t = get_n(), get_t()
+        print(f"- {n} FOMC servers hold private key shares")
+        print(f"- Any {t} servers can create a valid threshold signature")
         print("- The signature verifies against a group public key")
         print("- No single server can create a valid signature alone")
         sys.exit(2)
     
-    arg = " ".join(sys.argv[1:]).strip()
-    rc = asyncio.run(run_threshold_integration(arg))
+    rc = asyncio.run(run_threshold_integration(input_text))
     sys.exit(rc)
 
 
