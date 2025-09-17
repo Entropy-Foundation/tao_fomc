@@ -30,7 +30,7 @@ module fin_triggers::fomc_interest_rate_dexlyn {
     /// Initializes the per-account Balances resource with zeros if not present.
     /// This mirrors the legacy helper in the Liquidswap implementation and is useful for tests.
     struct Balances has key {
-        apt: u64,
+        supra: u64,
         usdt: u64,
     }
 
@@ -38,7 +38,7 @@ module fin_triggers::fomc_interest_rate_dexlyn {
     public entry fun init(account: &signer) {
         let addr = signer::address_of(account);
         if (!exists<Balances>(addr)) {
-            move_to(account, Balances { apt: 0, usdt: 0 });
+            move_to(account, Balances { supra: 0, usdt: 0 });
         }
     }
 
@@ -63,20 +63,20 @@ module fin_triggers::fomc_interest_rate_dexlyn {
     }
 
     #[test_only]
-    public fun test_mint(account: &signer, apt: u64, usdt: u64) acquires Balances {
+    public fun test_mint(account: &signer, supra: u64, usdt: u64) acquires Balances {
         let addr = signer::address_of(account);
         if (!exists<Balances>(addr)) {
-            move_to(account, Balances { apt, usdt });
+            move_to(account, Balances { supra, usdt });
         } else {
             let b = borrow_global_mut<Balances>(addr);
-            b.apt = b.apt + apt;
+            b.supra = b.supra + supra;
             b.usdt = b.usdt + usdt;
         }
     }
 
     /// Read-only helpers used by tests.
-    public fun get_apt(addr: address): u64 acquires Balances {
-        borrow_global<Balances>(addr).apt
+    public fun get_supra(addr: address): u64 acquires Balances {
+        borrow_global<Balances>(addr).supra
     }
 
     public fun get_usdt(addr: address): u64 acquires Balances {
@@ -85,7 +85,7 @@ module fin_triggers::fomc_interest_rate_dexlyn {
 
     /// Main entry point that records the rate movement and performs trades on DexLyn.
     /// The decision tree matches the Liquidswap implementation but routes swaps through DexLyn's router.
-    public entry fun record_interest_rate_movement_dexlyn<APT, USDT, Curve>(
+    public entry fun record_interest_rate_movement_dexlyn<SUPRA, USDT, Curve>(
         account: &signer,
         basis_points: u64,
         is_increase: bool,
@@ -102,19 +102,19 @@ module fin_triggers::fomc_interest_rate_dexlyn {
         let now = timestamp::now_microseconds();
         event::emit(InterestRateChangeEvent { basis_points, is_increase, timestamp: now });
 
-        ensure_registered<APT>(account);
+        ensure_registered<SUPRA>(account);
         ensure_registered<USDT>(account);
 
-        assert!(router::is_swap_exists<APT, USDT, Curve>(), 10);
+        assert!(router::is_swap_exists<SUPRA, USDT, Curve>(), 10);
 
         let min_out = 1;
 
         if (!is_increase && basis_points >= 50) {
-            swap_apt_to_usdt_percent<APT, USDT, Curve>(account, 30, min_out)
+            swap_supra_to_usdt_percent<SUPRA, USDT, Curve>(account, 30, min_out)
         } else if (!is_increase && basis_points >= 25) {
-            swap_apt_to_usdt_percent<APT, USDT, Curve>(account, 10, min_out)
+            swap_supra_to_usdt_percent<SUPRA, USDT, Curve>(account, 10, min_out)
         } else {
-            swap_usdt_to_apt_percent<APT, USDT, Curve>(account, 30, min_out)
+            swap_usdt_to_supra_percent<SUPRA, USDT, Curve>(account, 30, min_out)
         }
     }
 
@@ -141,23 +141,23 @@ module fin_triggers::fomc_interest_rate_dexlyn {
         assert!(ok, EVERIFY_FAILED);
     }
 
-    /// Withdraw `pct` percent of APT balance and swap for USDT on DexLyn, depositing the result back.
-    fun swap_apt_to_usdt_percent<APT, USDT, Curve>(
+    /// Withdraw `pct` percent of SUPRA balance and swap for USDT on DexLyn, depositing the result back.
+    fun swap_supra_to_usdt_percent<SUPRA, USDT, Curve>(
         account: &signer,
         pct: u64,
         min_out: u64,
     ) {
         let addr = signer::address_of(account);
-        let bal = coin::balance<APT>(addr);
+        let bal = coin::balance<SUPRA>(addr);
         let amount_in = percent_of(bal, pct);
         if (amount_in == 0) return;
-        let coin_in = coin::withdraw<APT>(account, amount_in);
-        let out_coin = router::swap_exact_coin_for_coin<APT, USDT, Curve>(coin_in, min_out);
+        let coin_in = coin::withdraw<SUPRA>(account, amount_in);
+        let out_coin = router::swap_exact_coin_for_coin<SUPRA, USDT, Curve>(coin_in, min_out);
         supra_account::deposit_coins<USDT>(addr, out_coin);
     }
 
-    /// Withdraw `pct` percent of USDT balance and swap for APT on DexLyn, depositing the result back.
-    fun swap_usdt_to_apt_percent<APT, USDT, Curve>(
+    /// Withdraw `pct` percent of USDT balance and swap for SUPRA on DexLyn, depositing the result back.
+    fun swap_usdt_to_supra_percent<SUPRA, USDT, Curve>(
         account: &signer,
         pct: u64,
         min_out: u64,
@@ -167,8 +167,8 @@ module fin_triggers::fomc_interest_rate_dexlyn {
         let amount_in = percent_of(bal, pct);
         if (amount_in == 0) return;
         let coin_in = coin::withdraw<USDT>(account, amount_in);
-        let out_coin = router::swap_exact_coin_for_coin<USDT, APT, Curve>(coin_in, min_out);
-        supra_account::deposit_coins<APT>(addr, out_coin);
+        let out_coin = router::swap_exact_coin_for_coin<USDT, SUPRA, Curve>(coin_in, min_out);
+        supra_account::deposit_coins<SUPRA>(addr, out_coin);
     }
 
     inline fun percent_of(amount: u64, pct: u64): u64 {

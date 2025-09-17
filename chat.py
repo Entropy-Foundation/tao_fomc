@@ -1,8 +1,50 @@
-import ollama
-import requests
-from bs4 import BeautifulSoup
 import json
 import logging
+from typing import Optional
+
+import requests
+from bs4 import BeautifulSoup
+
+try:
+    import ollama  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    ollama = None
+
+
+class OllamaUnavailableError(RuntimeError):
+    """Raised when Ollama client or service is not available."""
+
+
+_OLLAMA_AVAILABLE: Optional[bool] = None
+
+
+def is_ollama_available() -> bool:
+    """Return True if the Ollama client is importable and the service is reachable."""
+    global _OLLAMA_AVAILABLE
+
+    if _OLLAMA_AVAILABLE is not None:
+        return _OLLAMA_AVAILABLE
+
+    if ollama is None:
+        _OLLAMA_AVAILABLE = False
+        return False
+
+    try:
+        # A lightweight request that also verifies the daemon is running
+        ollama.list()
+        _OLLAMA_AVAILABLE = True
+    except Exception:
+        _OLLAMA_AVAILABLE = False
+
+    return _OLLAMA_AVAILABLE
+
+
+def _ensure_ollama_available() -> None:
+    """Raise if Ollama cannot be used in the current environment."""
+    if not is_ollama_available():
+        raise OllamaUnavailableError(
+            "Failed to connect to Ollama. Please check that Ollama is installed and running."
+        )
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -30,6 +72,7 @@ def warmup():
     """
     Performs the initial prompt to the LLM.
     """
+    _ensure_ollama_available()
     messages = []
 
     # 1. Initial prompt
@@ -46,6 +89,7 @@ def extract(article_text, messages):
     """
     Performs a structured conversation with the Gemma3 4B model and returns the result.
     """
+    _ensure_ollama_available()
     # 2. Retrieve and send article
     if not article_text:
         return None

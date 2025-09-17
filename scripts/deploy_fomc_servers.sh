@@ -26,20 +26,20 @@ DEPLOY_SSH_KEY=${DEPLOY_SSH_KEY:-~/.ssh/id_supra}
 DEPLOY_REMOTE_DIR=${DEPLOY_REMOTE_DIR:-~/fomc-servers}
 FOMC_PORT=${FOMC_PORT:-9001}
 
-# Build array of server IPs (using first 4 oracle node IPs)
+# Build array of server IPs (using FOMC server IPs from .env)
 SERVER_IPS=()
 for i in $(seq 1 $NUM_SERVERS); do
-    var_name="ORACLE_NODE_IP_$i"
+    var_name="FOMC_SERVER_${i}_IP"
     ip_value="${!var_name}"
     if [ -z "$ip_value" ]; then
-        echo "❌ Missing $var_name in oracle .env file"
+        echo "❌ Missing $var_name in .env file"
         exit 1
     fi
     SERVER_IPS+=("$ip_value")
 done
 
-# Client will run on the oracle aggregator server
-CLIENT_HOST="$DEPLOY_HOST"
+# Client will run on the FOMC client server
+CLIENT_HOST="$FOMC_CLIENT_IP"
 
 # Expand SSH key path
 SSH_KEY="${DEPLOY_SSH_KEY/#\~/$HOME}"

@@ -22,7 +22,13 @@ from pydantic import BaseModel
 from aptos_sdk.bcs import Serializer
 
 # Import existing functionality
-from chat import warmup, extract, get_article_text
+from chat import (
+    warmup,
+    extract,
+    get_article_text,
+    is_ollama_available,
+    OllamaUnavailableError,
+)
 from network_config import NetworkConfig
 from threshold_signing import (
     sign_bcs_message,
@@ -124,14 +130,20 @@ class FOMCServer:
             The rate change in basis points as an integer (negative for reductions,
             positive for increases), or None if not found.
         """
+        if not is_ollama_available():
+            logger.warning(
+                "Server %s - Ollama unavailable, skipping LLM extraction", self.server_id
+            )
+            return None
+
         try:
-            # Warm up the LLM
             messages = warmup()
-            # Extract rate change using LLM
             return extract(text, messages)
+        except OllamaUnavailableError as e:
+            logger.error(f"Server {self.server_id} - Ollama unavailable: {e}")
         except Exception as e:
             logger.error(f"Server {self.server_id} - Error using LLM approach: {e}")
-            return None
+        return None
     
     def sign_rate_change(self, rate_change: int) -> str:
         """

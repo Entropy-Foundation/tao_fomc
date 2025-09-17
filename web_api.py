@@ -17,7 +17,13 @@ from pydantic import BaseModel
 from aptos_sdk.bcs import Serializer
 
 # Import existing functionality
-from chat import warmup, extract, get_article_text
+from chat import (
+    warmup,
+    extract,
+    get_article_text,
+    is_ollama_available,
+    OllamaUnavailableError,
+)
 
 # BLS imports
 try:
@@ -89,14 +95,18 @@ def extract_rate_change_from_text_llm(text: str) -> Optional[int]:
         The rate change in basis points as an integer (negative for reductions,
         positive for increases), or None if not found.
     """
+    if not is_ollama_available():
+        logger.error("Ollama unavailable, skipping LLM extraction")
+        return None
+
     try:
-        # Warm up the LLM
         messages = warmup()
-        # Extract rate change using LLM
         return extract(text, messages)
+    except OllamaUnavailableError as e:
+        logger.error(f"Ollama unavailable: {e}")
     except Exception as e:
         logger.error(f"Error using LLM approach: {e}")
-        return None
+    return None
 
 def sign_rate_change(rate_change: int) -> str:
     """

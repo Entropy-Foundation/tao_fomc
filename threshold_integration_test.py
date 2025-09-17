@@ -26,7 +26,13 @@ from aptos_sdk.type_tag import StructTag, TypeTag
 
 from find_rate_reduction import find_rate_reduction
 from contract_utils import resolve_module_address
-from chat import warmup, extract, get_article_text
+from chat import (
+    warmup,
+    extract,
+    get_article_text,
+    is_ollama_available,
+    OllamaUnavailableError,
+)
 from threshold_signing import (
     generate_threshold_keys,
     create_bcs_message_for_fomc,
@@ -182,14 +188,18 @@ def extract_rate_change_from_text_llm(text: str) -> Optional[int]:
         The rate change in basis points as an integer (negative for reductions,
         positive for increases), or None if not found.
     """
+    if not is_ollama_available():
+        print("Ollama not available, skipping LLM extraction")
+        return None
+
     try:
-        # Warm up the LLM
         messages = warmup()
-        # Extract rate change using LLM
         return extract(text, messages)
+    except OllamaUnavailableError as e:
+        print(f"Ollama unavailable: {e}")
     except Exception as e:
         print(f"Error using LLM approach: {e}")
-        return None
+    return None
 
 
 def simulate_threshold_signing_servers(
@@ -274,11 +284,14 @@ async def run_threshold_integration(input_text_or_url: str):
         # For URLs, we can use either the existing regex approach or LLM approach
         try:
             article_text = get_article_text(input_text_or_url)
-            if article_text:
-                messages = warmup()
-                bps = extract(article_text, messages)
+            if article_text and is_ollama_available():
+                try:
+                    messages = warmup()
+                    bps = extract(article_text, messages)
+                except OllamaUnavailableError as e:
+                    print(f"Ollama unavailable: {e}")
+                    bps = find_rate_reduction(input_text_or_url)
             else:
-                # Fallback to the original approach if article extraction fails
                 bps = find_rate_reduction(input_text_or_url)
         except Exception as e:
             print(f"Error with LLM approach, falling back to regex: {e}")

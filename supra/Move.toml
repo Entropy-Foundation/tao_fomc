@@ -18,4 +18,4 @@ subdir = "supra/testnet/core"
 rev = "master"
 
 [addresses]
-fin_triggers = "0x72a347c7faf5a34ffaf942ea31f33d7dede4a618adbbceb60eff36b950e16b2b"
+fin_triggers = "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9"
