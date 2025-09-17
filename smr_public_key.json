@@ -1,9 +1,9 @@
 {
-  "active": "fomc-testnet",
+  "active": "fomc-testnet-3",
   "list": {
-    "fomc-dexlyn": {
-      "ed25519_public_key": "eb733dea252e234a41dddd680486044333326da924e4f184b5540f8ab49ca4c5",
-      "account_address": "72a347c7faf5a34ffaf942ea31f33d7dede4a618adbbceb60eff36b950e16b2b",
+    "fomc-testnet-3": {
+      "ed25519_public_key": "905826a36426370debf2d6b02677f3fe448e39b4070865303c5439542556267d",
+      "account_address": "b993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9",
       "network": "Localnet",
       "rpc_url": "https://rpc-testnet.supra.com/",
       "faucet_url": "https://rpc-testnet.supra.com/",
@@ -17,9 +17,9 @@
       "faucet_url": "https://rpc-testnet.supra.com/",
       "chain_id": 6
     },
-    "fomc-testnet-3": {
-      "ed25519_public_key": "905826a36426370debf2d6b02677f3fe448e39b4070865303c5439542556267d",
-      "account_address": "b993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9",
+    "fomc-dexlyn": {
+      "ed25519_public_key": "eb733dea252e234a41dddd680486044333326da924e4f184b5540f8ab49ca4c5",
+      "account_address": "72a347c7faf5a34ffaf942ea31f33d7dede4a618adbbceb60eff36b950e16b2b",
       "network": "Localnet",
       "rpc_url": "https://rpc-testnet.supra.com/",
       "faucet_url": "https://rpc-testnet.supra.com/",

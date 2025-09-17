@@ -83,6 +83,8 @@ def set_bls_public_key_onchain(profile: str = "fomc-testnet-3"):
         "--function-id", function_id,
         "--args"] + args + [
         "--profile", profile,
+        "--max-gas", "1000",
+        "--gas-unit-price", "100",
         "--assume-yes"
     ]
     
@@ -139,6 +141,8 @@ def call_supra_cli(basis_points: int, is_increase: bool, signature_hex: str, pro
         "--type-args"] + type_args + [
         "--args"] + args + [
         "--profile", profile,
+        "--max-gas", "1000",
+        "--gas-unit-price", "100",
         "--assume-yes"
     ]
     
