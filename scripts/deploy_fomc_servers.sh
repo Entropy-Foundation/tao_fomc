@@ -200,7 +200,21 @@ deploy_client() {
               "$TEMP_DIR/"
     
     # Create network config for remote servers
+    # Use 0.0.0.0 for server binding to accept external connections
+    # Use actual server IPs for client connections
     cat > "$TEMP_DIR/network_config.json" << EOF
+{
+  "servers": [
+    {"id": 1, "host": "0.0.0.0", "port": $FOMC_PORT},
+    {"id": 2, "host": "0.0.0.0", "port": $FOMC_PORT},
+    {"id": 3, "host": "0.0.0.0", "port": $FOMC_PORT},
+    {"id": 4, "host": "0.0.0.0", "port": $FOMC_PORT}
+  ]
+}
+EOF
+    
+    # Create client network config with actual server IPs for client connections
+    cat > "$TEMP_DIR/client_network_config.json" << EOF
 {
   "servers": [
     {"id": 1, "host": "${SERVER_IPS[0]}", "port": $FOMC_PORT},
@@ -219,6 +233,11 @@ EOF
     # Upload client files
     rsync -avz -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" \
           "$TEMP_DIR/" "$DEPLOY_USER@$host:~/fomc-client/"
+    
+    # Copy client network config with actual server IPs
+    scp -i "$SSH_KEY" -o StrictHostKeyChecking=no \
+        "$TEMP_DIR/client_network_config.json" \
+        "$DEPLOY_USER@$host:~/fomc-client/network_config.json"
     
     # Setup client environment
     print_status "Setting up client environment..."

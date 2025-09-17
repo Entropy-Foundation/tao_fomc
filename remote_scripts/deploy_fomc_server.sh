@@ -109,9 +109,10 @@ Requires=ollama.service
 Type=simple
 User=$DEPLOY_USER
 WorkingDirectory=$DEPLOY_REMOTE_DIR
-Environment=PATH=$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=/home/$DEPLOY_USER/.local/bin:/usr/local/bin:/usr/bin:/bin
 Environment=FOMC_PORT=$FOMC_PORT
-ExecStart=$HOME/.local/bin/poetry run python multi_web_api.py $SERVER_ID
+Environment=FOMC_HOST=0.0.0.0
+ExecStart=/home/$DEPLOY_USER/.local/bin/poetry run python multi_web_api.py $SERVER_ID
 Restart=always
 RestartSec=10
 StandardOutput=syslog

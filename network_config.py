@@ -17,6 +17,8 @@ class NetworkConfig:
         self.config_file = config_file or os.environ.get('NETWORK_CONFIG_FILE', 'network_config.json')
         self.servers_override = servers_override
         self.config = self._load_config()
+        # Apply environment variable overrides after loading config
+        self._apply_env_overrides()
         
     def _load_config(self) -> Dict:
         """Load network configuration from file, environment, or defaults."""
@@ -42,12 +44,14 @@ class NetworkConfig:
                 print(f"Failed to load config from {self.config_file}: {e}")
         
         # Fallback to default configuration for 4 servers
+        # Use environment variable FOMC_PORT if available, otherwise default ports
+        base_port = int(os.environ.get('FOMC_PORT', '9001'))
         config = {
             "servers": [
-                {"id": 1, "host": "127.0.0.1", "port": 9001},
-                {"id": 2, "host": "127.0.0.1", "port": 9002},
-                {"id": 3, "host": "127.0.0.1", "port": 9003},
-                {"id": 4, "host": "127.0.0.1", "port": 9004}
+                {"id": 1, "host": "0.0.0.0", "port": base_port},
+                {"id": 2, "host": "0.0.0.0", "port": base_port + 1},
+                {"id": 3, "host": "0.0.0.0", "port": base_port + 2},
+                {"id": 4, "host": "0.0.0.0", "port": base_port + 3}
             ]
         }
         
@@ -99,6 +103,31 @@ class NetworkConfig:
                 print(f"Failed to parse FOMC_SERVER_URLS: {e}")
         
         return None
+    
+    def _apply_env_overrides(self):
+        """Apply environment variable overrides to the loaded configuration."""
+        # Check if FOMC_PORT is set and override server ports
+        fomc_port = os.environ.get('FOMC_PORT')
+        if fomc_port:
+            try:
+                base_port = int(fomc_port)
+                print(f"Overriding server ports with FOMC_PORT={base_port}")
+                for i, server in enumerate(self.config["servers"]):
+                    if server["id"] == 1:
+                        server["port"] = base_port
+                    else:
+                        # For multi-server setups, use the same port for all servers
+                        # since each server runs on a different machine
+                        server["port"] = base_port
+            except ValueError:
+                print(f"Invalid FOMC_PORT value: {fomc_port}")
+        
+        # Check if we should override host binding for servers
+        fomc_host = os.environ.get('FOMC_HOST')
+        if fomc_host:
+            print(f"Overriding server host binding with FOMC_HOST={fomc_host}")
+            for server in self.config["servers"]:
+                server["host"] = fomc_host
     
     def get_servers_config(self) -> List[Dict]:
         """Get all servers configuration."""

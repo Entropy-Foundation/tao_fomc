@@ -1,0 +1,20 @@
+[package]
+name = 'supra'
+version = '0.1.0'
+
+[dependencies.SupraFramework]
+git = 'https://github.com/Entropy-Foundation/aptos-core.git'
+subdir = 'aptos-move/framework/supra-framework'
+rev = 'dev'
+
+[dependencies.dexlyn_swap]
+git = 'https://github.com/DexlynLabs/dexlyn_swap_interface.git'
+rev = 'mainnet'
+
+[dependencies.core]
+git = "https://github.com/Entropy-Foundation/dora-interface"
+subdir = "supra/mainnet/core"
+rev = "master"
+
+[addresses]
+fin_triggers = "0xc9fb71cee7945c828b8b64c63991002c07886a8ac2106f46fc339698a0c2f9c6"
