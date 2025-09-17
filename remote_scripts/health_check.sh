@@ -134,17 +134,42 @@ if [ "$SYSTEM_TYPE" = "server" ]; then
     print_status ""
     print_status "=== FOMC Server Services ==="
     
+    # Function to get port for a server
+    get_server_port() {
+        local server_id=$1
+        local port=9001  # default
+        
+        # Try to get port from network_config.json if it exists
+        if [ -f "network_config.json" ] && command -v python3 >/dev/null 2>&1; then
+            port=$(python3 -c "
+import json
+try:
+    with open('network_config.json', 'r') as f:
+        config = json.load(f)
+    for server in config['servers']:
+        if server['id'] == $server_id:
+            print(server['port'])
+            break
+    else:
+        print($port)
+except:
+    print($port)
+" 2>/dev/null)
+        fi
+        echo $port
+    }
+    
     for i in {1..4}; do
         SERVICE_NAME="fomc-server-$i"
         if systemctl list-unit-files | grep -q "$SERVICE_NAME"; then
             if systemctl is-active --quiet "$SERVICE_NAME"; then
                 print_success "Server $i: Running"
-                PORT=$((8000 + i))
+                PORT=$(get_server_port $i)
                 # Test HTTP endpoint
                 if curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/health" | grep -q "200"; then
-                    print_success "  HTTP health check: OK"
+                    print_success "  HTTP health check: OK (port $PORT)"
                 else
-                    print_warning "  HTTP health check: Failed"
+                    print_warning "  HTTP health check: Failed (port $PORT)"
                 fi
             else
                 print_warning "Server $i: Stopped"

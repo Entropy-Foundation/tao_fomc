@@ -19,6 +19,7 @@ import sys
 import json
 import requests
 import aiohttp
+import argparse
 from typing import Optional, Dict, List, Tuple
 import yaml
 from aptos_sdk.account import Account
@@ -64,8 +65,14 @@ USDT_TYPE = os.environ.get(
 class ThresholdClient:
     """Client for communicating with FOMC threshold signing servers."""
     
-    def __init__(self):
-        self.network_config = NetworkConfig()
+    def __init__(self, config_file: Optional[str] = None, servers_override: Optional[List[Dict]] = None):
+        """Initialize threshold client.
+        
+        Args:
+            config_file: Path to network config file
+            servers_override: Optional list of server configs to override defaults
+        """
+        self.network_config = NetworkConfig(config_file=config_file, servers_override=servers_override)
         self.servers = self.network_config.get_servers_config()
         self.group_public_key = None
         self._load_group_public_key()
@@ -333,7 +340,7 @@ async def call_move_real_swap_threshold(
     await rest.wait_for_transaction(txh)
     return txh
 
-async def run_threshold_client(input_text_or_url: str):
+async def run_threshold_client(input_text_or_url: str, config_file: Optional[str] = None, servers_override: Optional[List[Dict]] = None):
     """
     Run the threshold client workflow.
     
@@ -341,13 +348,18 @@ async def run_threshold_client(input_text_or_url: str):
     2. Call servers for extraction and partial signatures
     3. Combine partial signatures into threshold signature
     4. Execute on-chain transaction
+    
+    Args:
+        input_text_or_url: Text or URL to analyze
+        config_file: Path to network config file
+        servers_override: Optional list of server configs to override defaults
     """
     print("🚀 Starting FOMC Threshold Client")
     n, t = get_n(), get_t()
     print(f"📊 Configuration: {n} servers, {t}-of-{n} threshold")
     
     # Initialize client
-    client = ThresholdClient()
+    client = ThresholdClient(config_file=config_file, servers_override=servers_override)
     
     # 1. Check server health
     if not client.check_server_health():
@@ -419,28 +431,102 @@ async def run_threshold_client(input_text_or_url: str):
         await rest.close()
     return 0
 
+def parse_server_urls(urls_str: str) -> List[Dict]:
+    """Parse comma-separated server URLs into server config format."""
+    urls = [url.strip() for url in urls_str.split(',') if url.strip()]
+    servers = []
+    for i, url in enumerate(urls, 1):
+        # Parse URL format: http://host:port or host:port
+        if url.startswith('http://'):
+            url = url[7:]  # Remove http://
+        elif url.startswith('https://'):
+            url = url[8:]  # Remove https://
+        
+        if ':' in url:
+            host, port_str = url.rsplit(':', 1)
+            port = int(port_str)
+        else:
+            raise ValueError(f"Invalid URL format: {url} (expected host:port)")
+        
+        servers.append({"id": i, "host": host, "port": port})
+    
+    return servers
+
 def main():
     """Main function with command line argument parsing."""
-    if len(sys.argv) < 2:
-        print("Usage: python client.py <url-or-text>")
-        print("Examples:")
-        print("  python client.py https://example.com/fed-cuts")
-        print('  python client.py "Fed cuts rates by 50 basis points"')
-        print("\nThis client communicates with already running FOMC servers.")
-        print("Make sure to start servers first with: ./start_servers_local.sh")
-        n, t = get_n(), get_t()
-        print(f"\nSystem configuration: {n} servers, {t}-of-{n} threshold")
-        sys.exit(2)
+    parser = argparse.ArgumentParser(
+        description="FOMC Threshold Client - Communicates with running FOMC servers",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python client.py "Fed cuts rates by 50 basis points"
+  python client.py https://example.com/fed-cuts
+  python client.py --servers localhost:8001,localhost:8002,localhost:8003 "Fed announcement"
+  python client.py --config custom_network.json "Rate change text"
+
+Environment Variables:
+  FOMC_SERVER_URLS     Comma-separated server URLs (host:port)
+  FOMC_SERVERS_JSON    Full JSON server configuration
+  NETWORK_CONFIG_FILE  Path to network config file
+
+This client communicates with already running FOMC servers.
+Make sure to start servers first with: ./start_servers_local.sh
+        """
+    )
     
-    input_text = " ".join(sys.argv[1:]).strip()
+    parser.add_argument(
+        'input_text',
+        nargs='+',
+        help='Text or URL to analyze for rate changes'
+    )
+    
+    parser.add_argument(
+        '--servers', '-s',
+        help='Comma-separated list of server URLs (host:port)'
+    )
+    
+    parser.add_argument(
+        '--config', '-c',
+        help='Path to network configuration JSON file'
+    )
+    
+    args = parser.parse_args()
+    
+    input_text = " ".join(args.input_text).strip()
+    
+    # Parse server configuration
+    servers_override = None
+    if args.servers:
+        try:
+            servers_override = parse_server_urls(args.servers)
+            print(f"Using command-line server configuration: {len(servers_override)} servers")
+        except Exception as e:
+            print(f"❌ Error parsing server URLs: {e}")
+            sys.exit(1)
     
     print("=" * 60)
     print("🔗 FOMC THRESHOLD CLIENT")
     print("=" * 60)
     print(f"Input: {input_text}")
+    
+    # Show configuration info
+    n, t = get_n(), get_t()
+    print(f"System configuration: {n} servers, {t}-of-{n} threshold")
+    
+    if servers_override:
+        print(f"Server override: {len(servers_override)} servers from command line")
+    elif args.config:
+        print(f"Config file: {args.config}")
+    elif os.environ.get('FOMC_SERVER_URLS'):
+        print("Server config: FOMC_SERVER_URLS environment variable")
+    elif os.environ.get('FOMC_SERVERS_JSON'):
+        print("Server config: FOMC_SERVERS_JSON environment variable")
+    else:
+        print("Server config: default or network_config.json")
+    
     print()
     
-    rc = asyncio.run(run_threshold_client(input_text))
+    rc = asyncio.run(run_threshold_client(input_text, config_file=args.config, servers_override=servers_override))
     sys.exit(rc)
 
 if __name__ == "__main__":

@@ -7,14 +7,31 @@ from typing import Dict, List, Optional
 class NetworkConfig:
     """Configuration for network nodes and communication."""
     
-    def __init__(self, config_file: Optional[str] = None):
-        """Initialize network configuration."""
+    def __init__(self, config_file: Optional[str] = None, servers_override: Optional[List[Dict]] = None):
+        """Initialize network configuration.
+        
+        Args:
+            config_file: Path to JSON config file
+            servers_override: Optional list of server configs to override all other sources
+        """
         self.config_file = config_file or os.environ.get('NETWORK_CONFIG_FILE', 'network_config.json')
+        self.servers_override = servers_override
         self.config = self._load_config()
         
     def _load_config(self) -> Dict:
-        """Load network configuration from file or environment."""
-        # Try to load from file first
+        """Load network configuration from file, environment, or defaults."""
+        # If servers are explicitly provided, use them
+        if self.servers_override:
+            config = {"servers": self.servers_override}
+            print(f"Using provided server configuration with {len(self.servers_override)} servers")
+            return config
+        
+        # Try to load from environment variables first
+        env_config = self._load_from_environment()
+        if env_config:
+            return env_config
+        
+        # Try to load from file
         if os.path.exists(self.config_file):
             try:
                 with open(self.config_file, 'r') as f:
@@ -27,15 +44,61 @@ class NetworkConfig:
         # Fallback to default configuration for 4 servers
         config = {
             "servers": [
-                {"id": 1, "host": "127.0.0.1", "port": 8001},
-                {"id": 2, "host": "127.0.0.1", "port": 8002},
-                {"id": 3, "host": "127.0.0.1", "port": 8003},
-                {"id": 4, "host": "127.0.0.1", "port": 8004}
+                {"id": 1, "host": "127.0.0.1", "port": 9001},
+                {"id": 2, "host": "127.0.0.1", "port": 9002},
+                {"id": 3, "host": "127.0.0.1", "port": 9003},
+                {"id": 4, "host": "127.0.0.1", "port": 9004}
             ]
         }
         
         print(f"Using default network config with 4 servers")
         return config
+    
+    def _load_from_environment(self) -> Optional[Dict]:
+        """Load server configuration from environment variables.
+        
+        Supports two formats:
+        1. FOMC_SERVERS_JSON: JSON string with full server config
+        2. FOMC_SERVER_URLS: Comma-separated list of URLs (http://host:port)
+        """
+        # Format 1: Full JSON configuration
+        servers_json = os.environ.get('FOMC_SERVERS_JSON')
+        if servers_json:
+            try:
+                config = json.loads(servers_json)
+                print(f"Loaded network config from FOMC_SERVERS_JSON environment variable")
+                return config
+            except Exception as e:
+                print(f"Failed to parse FOMC_SERVERS_JSON: {e}")
+        
+        # Format 2: Simple URL list
+        server_urls = os.environ.get('FOMC_SERVER_URLS')
+        if server_urls:
+            try:
+                urls = [url.strip() for url in server_urls.split(',') if url.strip()]
+                servers = []
+                for i, url in enumerate(urls, 1):
+                    # Parse URL format: http://host:port or host:port
+                    if url.startswith('http://'):
+                        url = url[7:]  # Remove http://
+                    elif url.startswith('https://'):
+                        url = url[8:]  # Remove https://
+                    
+                    if ':' in url:
+                        host, port_str = url.rsplit(':', 1)
+                        port = int(port_str)
+                    else:
+                        raise ValueError(f"Invalid URL format: {url} (expected host:port)")
+                    
+                    servers.append({"id": i, "host": host, "port": port})
+                
+                config = {"servers": servers}
+                print(f"Loaded network config from FOMC_SERVER_URLS environment variable ({len(servers)} servers)")
+                return config
+            except Exception as e:
+                print(f"Failed to parse FOMC_SERVER_URLS: {e}")
+        
+        return None
     
     def get_servers_config(self) -> List[Dict]:
         """Get all servers configuration."""

@@ -9,6 +9,7 @@ set -e
 SERVER_ID=${1:-1}
 DEPLOY_USER=${2:-ubuntu}
 DEPLOY_REMOTE_DIR=${3:-~/fomc-servers}
+FOMC_PORT=${4:-9001}
 
 # Colors for output
 RED='\033[0;31m'
@@ -37,6 +38,7 @@ print_status "🚀 Setting up FOMC Server $SERVER_ID..."
 print_status "Server ID: $SERVER_ID"
 print_status "Deploy user: $DEPLOY_USER"
 print_status "Deploy directory: $DEPLOY_REMOTE_DIR"
+print_status "Port: $FOMC_PORT"
 
 # Change to deployment directory
 cd $DEPLOY_REMOTE_DIR
@@ -108,6 +110,7 @@ Type=simple
 User=$DEPLOY_USER
 WorkingDirectory=$DEPLOY_REMOTE_DIR
 Environment=PATH=$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=FOMC_PORT=$FOMC_PORT
 ExecStart=$HOME/.local/bin/poetry run python multi_web_api.py $SERVER_ID
 Restart=always
 RestartSec=10
@@ -123,8 +126,7 @@ EOF
 print_status "Configuring firewall for FOMC server..."
 sudo ufw --force enable
 sudo ufw allow ssh
-PORT=8001
-sudo ufw allow $PORT/tcp
+sudo ufw allow $FOMC_PORT/tcp
 
 # Create log directory
 sudo mkdir -p /var/log/fomc-server
@@ -182,10 +184,9 @@ fi
 print_status "Testing FOMC server $SERVER_ID service..."
 sleep 5
 
-PORT=8001
 for i in {1..30}; do
-    if curl -s -o /dev/null -w "%{http_code}" http://localhost:$PORT/health | grep -q "200"; then
-        print_success "✅ FOMC Server $SERVER_ID is responding on port $PORT"
+    if curl -s -o /dev/null -w "%{http_code}" http://localhost:$FOMC_PORT/health | grep -q "200"; then
+        print_success "✅ FOMC Server $SERVER_ID is responding on port $FOMC_PORT"
         break
     fi
     if [ $i -eq 30 ]; then
@@ -204,7 +205,7 @@ print_success "🎉 FOMC Server $SERVER_ID deployment completed successfully!"
 print_status ""
 print_status "FOMC Server $SERVER_ID Summary:"
 print_status "  • Service: fomc-server-$SERVER_ID"
-print_status "  • Port: $PORT"
+print_status "  • Port: $FOMC_PORT"
 print_status "  • Status: $(sudo systemctl is-active fomc-server-$SERVER_ID)"
 print_status ""
 print_status "Management commands:"

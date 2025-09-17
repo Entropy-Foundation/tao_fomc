@@ -20,6 +20,7 @@ NUM_SERVERS=4
 DEPLOY_USER=${DEPLOY_USER:-ubuntu}
 DEPLOY_SSH_KEY=${DEPLOY_SSH_KEY:-~/.ssh/id_supra}
 DEPLOY_REMOTE_DIR=${DEPLOY_REMOTE_DIR:-~/fomc-servers}
+FOMC_PORT=${FOMC_PORT:-9001}
 
 # Build array of server IPs (using first 4 oracle node IPs)
 SERVER_IPS=()
@@ -65,7 +66,7 @@ print_warning() {
 print_status "🚀 Starting FOMC Multi-Server Deployment..."
 echo "Servers (4):"
 for i in "${!SERVER_IPS[@]}"; do
-    echo "  Server $((i+1)): $DEPLOY_USER@${SERVER_IPS[$i]} (port 8001)"
+    echo "  Server $((i+1)): $DEPLOY_USER@${SERVER_IPS[$i]} (port $FOMC_PORT)"
 done
 echo "Client Host: $DEPLOY_USER@$CLIENT_HOST"
 echo "SSH Key: $SSH_KEY"
@@ -139,20 +140,32 @@ deploy_to_server() {
     # Install ollama and download models
     print_status "Installing ollama on server $server_id..."
     if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
-       "cd $DEPLOY_REMOTE_DIR && chmod +x remote_scripts/install_ollama.sh && ./remote_scripts/install_ollama.sh"; then
-        print_success "✅ Ollama installation completed on server $server_id"
+       "cd $DEPLOY_REMOTE_DIR && chmod +x remote_scripts/install_ollama.sh"; then
+        if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
+           "cd $DEPLOY_REMOTE_DIR && ./remote_scripts/install_ollama.sh"; then
+            print_success "✅ Ollama installation completed on server $server_id"
+        else
+            print_error "❌ Failed to install ollama on server $server_id"
+            return 1
+        fi
     else
-        print_error "❌ Failed to install ollama on server $server_id"
+        print_error "❌ Failed to make install_ollama.sh executable on server $server_id"
         return 1
     fi
     
     # Deploy FOMC server
     print_status "Setting up FOMC server $server_id..."
     if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
-       "cd $DEPLOY_REMOTE_DIR && chmod +x remote_scripts/deploy_fomc_server.sh && ./remote_scripts/deploy_fomc_server.sh $server_id $DEPLOY_USER $DEPLOY_REMOTE_DIR"; then
-        print_success "✅ FOMC server $server_id deployment completed"
+       "cd $DEPLOY_REMOTE_DIR && chmod +x remote_scripts/deploy_fomc_server.sh"; then
+        if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
+           "cd $DEPLOY_REMOTE_DIR && ./remote_scripts/deploy_fomc_server.sh $server_id $DEPLOY_USER $DEPLOY_REMOTE_DIR $FOMC_PORT"; then
+            print_success "✅ FOMC server $server_id deployment completed"
+        else
+            print_error "❌ Failed to deploy FOMC server $server_id"
+            return 1
+        fi
     else
-        print_error "❌ Failed to deploy FOMC server $server_id"
+        print_error "❌ Failed to make deploy_fomc_server.sh executable on server $server_id"
         return 1
     fi
     
@@ -169,7 +182,7 @@ deploy_client() {
     # Create deployment package for client
     TEMP_DIR=$(mktemp -d)
     
-    # Copy client files
+    # Copy client files including test scripts
     rsync -av --exclude='.git' \
               --exclude='__pycache__' \
               --exclude='*.pyc' \
@@ -178,6 +191,11 @@ deploy_client() {
               threshold_signing.py \
               contract_utils.py \
               chat.py \
+              test_multi_servers.py \
+              integration_test.py \
+              threshold_integration_test.py \
+              find_rate_reduction.py \
+              fomc_rss_feed.py \
               remote_scripts/ \
               "$TEMP_DIR/"
     
@@ -185,10 +203,10 @@ deploy_client() {
     cat > "$TEMP_DIR/network_config.json" << EOF
 {
   "servers": [
-    {"id": 1, "host": "${SERVER_IPS[0]}", "port": 8001},
-    {"id": 2, "host": "${SERVER_IPS[1]}", "port": 8001},
-    {"id": 3, "host": "${SERVER_IPS[2]}", "port": 8001},
-    {"id": 4, "host": "${SERVER_IPS[3]}", "port": 8001}
+    {"id": 1, "host": "${SERVER_IPS[0]}", "port": $FOMC_PORT},
+    {"id": 2, "host": "${SERVER_IPS[1]}", "port": $FOMC_PORT},
+    {"id": 3, "host": "${SERVER_IPS[2]}", "port": $FOMC_PORT},
+    {"id": 4, "host": "${SERVER_IPS[3]}", "port": $FOMC_PORT}
   ]
 }
 EOF
@@ -205,10 +223,17 @@ EOF
     # Setup client environment
     print_status "Setting up client environment..."
     if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
-       "cd ~/fomc-client/ && chmod +x remote_scripts/deploy_fomc_client.sh && ./remote_scripts/deploy_fomc_client.sh $DEPLOY_USER ~/fomc-client"; then
-        print_success "✅ Client deployment completed"
+       "cd ~/fomc-client/ && chmod +x remote_scripts/deploy_fomc_client.sh"; then
+        if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
+           "cd ~/fomc-client/ && ./remote_scripts/deploy_fomc_client.sh $DEPLOY_USER ~/fomc-client"; then
+            print_success "✅ Client deployment completed"
+        else
+            print_error "❌ Failed to deploy client"
+            rm -rf "$TEMP_DIR"
+            return 1
+        fi
     else
-        print_error "❌ Failed to deploy client"
+        print_error "❌ Failed to make deploy_fomc_client.sh executable on client"
         rm -rf "$TEMP_DIR"
         return 1
     fi
@@ -253,34 +278,32 @@ with open('keys/bls_public_keys.json', 'r') as f:
     fi
 }
 
-# Function to test deployment
+# Function to test deployment on remote client (avoids firewall issues)
 test_deployment() {
-    print_status "🧪 Testing deployment..."
+    print_status "🧪 Testing deployment on remote client..."
     
-    # Test each server
-    for i in "${!SERVER_IPS[@]}"; do
-        server_id=$((i+1))
-        host="${SERVER_IPS[$i]}"
-        port=8001
-        
-        print_status "Testing server $server_id ($host:$port)..."
-        
-        # Test health endpoint via SSH (since servers may be behind firewall)
-        if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
-           "curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 'http://localhost:$port/health' 2>/dev/null | grep -q '200'" 2>/dev/null; then
-            print_success "✅ Server $server_id health check passed"
-        else
-            print_warning "⚠️  Server $server_id health check failed"
-        fi
-    done
-    
-    # Test client
-    print_status "Testing client on $CLIENT_HOST..."
+    print_status "Running comprehensive health tests on client VM..."
     if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$CLIENT_HOST" \
-       "cd ~/fomc-client/ && ./remote_scripts/health_check.sh" 2>/dev/null; then
-        print_success "✅ Client health check passed"
+       "cd ~/fomc-client/ && chmod +x remote_scripts/run_health_tests.sh && ./remote_scripts/run_health_tests.sh ~/fomc-client health" 2>/dev/null; then
+        print_success "✅ Remote health tests passed"
     else
-        print_warning "⚠️  Client health check failed"
+        print_warning "⚠️  Remote health tests failed"
+    fi
+    
+    print_status "Running integration tests on client VM..."
+    if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$CLIENT_HOST" \
+       "cd ~/fomc-client/ && chmod +x remote_scripts/run_integration_tests.sh && ./remote_scripts/run_integration_tests.sh ~/fomc-client safe" 2>/dev/null; then
+        print_success "✅ Remote integration tests passed"
+    else
+        print_warning "⚠️  Remote integration tests failed"
+    fi
+    
+    print_status "Running threshold signing tests on client VM..."
+    if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$CLIENT_HOST" \
+       "cd ~/fomc-client/ && chmod +x remote_scripts/run_threshold_tests.sh && ./remote_scripts/run_threshold_tests.sh ~/fomc-client 4,3 safe" 2>/dev/null; then
+        print_success "✅ Remote threshold signing tests passed"
+    else
+        print_warning "⚠️  Remote threshold signing tests failed"
     fi
 }
 
@@ -293,15 +316,15 @@ show_deployment_summary() {
     echo "  • Servers:"
     for i in "${!SERVER_IPS[@]}"; do
         server_id=$((i+1))
-        echo "    - Server $server_id: ${SERVER_IPS[$i]}:8001"
+        echo "    - Server $server_id: ${SERVER_IPS[$i]}:$FOMC_PORT"
     done
     echo "  • Client: $CLIENT_HOST"
     echo ""
     echo "🌐 Server Endpoints (internal access only):"
     for i in "${!SERVER_IPS[@]}"; do
         server_id=$((i+1))
-        echo "  • Server $server_id Health: http://${SERVER_IPS[$i]}:8001/health"
-        echo "  • Server $server_id Extract: http://${SERVER_IPS[$i]}:8001/extract"
+        echo "  • Server $server_id Health: http://${SERVER_IPS[$i]}:$FOMC_PORT/health"
+        echo "  • Server $server_id Extract: http://${SERVER_IPS[$i]}:$FOMC_PORT/extract"
     done
     echo ""
     echo "🔧 Management Commands:"
@@ -324,6 +347,11 @@ show_deployment_summary() {
     echo "🔍 Health Checks:"
     echo "  • Server health: ssh to server and run './health_check.sh'"
     echo "  • Client health: ssh to client and run './remote_scripts/health_check.sh'"
+    echo ""
+    echo "🧪 Remote Testing (run from client VM to avoid firewall issues):"
+    echo "  • Health tests: ssh to client and run './remote_scripts/run_health_tests.sh'"
+    echo "  • Integration tests: ssh to client and run './remote_scripts/run_integration_tests.sh'"
+    echo "  • Threshold tests: ssh to client and run './remote_scripts/run_threshold_tests.sh'"
 }
 
 # Main deployment function

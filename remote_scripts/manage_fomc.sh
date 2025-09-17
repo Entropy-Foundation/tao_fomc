@@ -8,6 +8,31 @@ set -e
 # Get server ID from environment or default to 1
 SERVER_ID=${SERVER_ID:-1}
 
+# Get port from network config or environment variable, default to 9001
+get_port() {
+    # Try to get port from network_config.json if it exists
+    if [ -f "network_config.json" ] && command -v python3 >/dev/null 2>&1; then
+        PORT=$(python3 -c "
+import json
+try:
+    with open('network_config.json', 'r') as f:
+        config = json.load(f)
+    for server in config['servers']:
+        if server['id'] == $SERVER_ID:
+            print(server['port'])
+            break
+except:
+    print('9001')
+" 2>/dev/null)
+    else
+        # Fallback to environment variable or default
+        PORT=${FOMC_PORT:-9001}
+    fi
+    echo $PORT
+}
+
+PORT=$(get_port)
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -32,7 +57,6 @@ print_warning() {
 }
 
 SERVICE_NAME="fomc-server-$SERVER_ID"
-PORT=8001
 
 show_usage() {
     echo "FOMC Server Management Script"
