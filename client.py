@@ -147,7 +147,7 @@ class ThresholdClient:
             
             try:
                 print(f"📞 Calling server {server['id']}...")
-                async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=120)) as response:
                     if response.status == 200:
                         data = await response.json()
                         rate_change = data['rate_change']

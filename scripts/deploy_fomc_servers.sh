@@ -100,7 +100,7 @@ deploy_fomc_code() {
     TEMP_DIR=$(mktemp -d)
     print_status "Creating deployment package for server $server_id..."
     
-    # Copy all necessary files
+    # Copy all necessary files including Poetry configuration
     rsync -av --exclude='.git' \
               --exclude='__pycache__' \
               --exclude='*.pyc' \
@@ -111,11 +111,13 @@ deploy_fomc_code() {
               --exclude='.venv' \
               --exclude='logs/*' \
               --exclude='external/' \
+              --include='pyproject.toml' \
+              --include='poetry.lock' \
               . "$TEMP_DIR/"
     
     # Upload files using rsync
     print_status "Uploading files to server $server_id..."
-    rsync -avz -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" \
+    rsync -avz --perms -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" \
           "$TEMP_DIR/" "$DEPLOY_USER@$host:$DEPLOY_REMOTE_DIR/"
     
     # Clean up temporary directory
@@ -139,33 +141,41 @@ deploy_to_server() {
     
     # Install ollama and download models
     print_status "Installing ollama on server $server_id..."
+    # First make the script executable
     if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
        "cd $DEPLOY_REMOTE_DIR && chmod +x remote_scripts/install_ollama.sh"; then
-        if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
-           "cd $DEPLOY_REMOTE_DIR && ./remote_scripts/install_ollama.sh"; then
-            print_success "✅ Ollama installation completed on server $server_id"
-        else
-            print_error "❌ Failed to install ollama on server $server_id"
-            return 1
-        fi
+        print_status "Made install_ollama.sh executable on server $server_id"
     else
         print_error "❌ Failed to make install_ollama.sh executable on server $server_id"
         return 1
     fi
     
+    # Then execute the script in a separate command
+    if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
+       "cd $DEPLOY_REMOTE_DIR && ./remote_scripts/install_ollama.sh"; then
+        print_success "✅ Ollama installation completed on server $server_id"
+    else
+        print_error "❌ Failed to install ollama on server $server_id"
+        return 1
+    fi
+    
     # Deploy FOMC server
     print_status "Setting up FOMC server $server_id..."
+    # First make the script executable
     if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
        "cd $DEPLOY_REMOTE_DIR && chmod +x remote_scripts/deploy_fomc_server.sh"; then
-        if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
-           "cd $DEPLOY_REMOTE_DIR && ./remote_scripts/deploy_fomc_server.sh $server_id $DEPLOY_USER $DEPLOY_REMOTE_DIR $FOMC_PORT"; then
-            print_success "✅ FOMC server $server_id deployment completed"
-        else
-            print_error "❌ Failed to deploy FOMC server $server_id"
-            return 1
-        fi
+        print_status "Made deploy_fomc_server.sh executable on server $server_id"
     else
         print_error "❌ Failed to make deploy_fomc_server.sh executable on server $server_id"
+        return 1
+    fi
+    
+    # Then execute the script in a separate command
+    if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
+       "cd $DEPLOY_REMOTE_DIR && ./remote_scripts/deploy_fomc_server.sh $server_id $DEPLOY_USER $DEPLOY_REMOTE_DIR $FOMC_PORT"; then
+        print_success "✅ FOMC server $server_id deployment completed"
+    else
+        print_error "❌ Failed to deploy FOMC server $server_id"
         return 1
     fi
     
@@ -182,7 +192,7 @@ deploy_client() {
     # Create deployment package for client
     TEMP_DIR=$(mktemp -d)
     
-    # Copy client files including test scripts
+    # Copy client files including test scripts and Poetry configuration
     rsync -av --exclude='.git' \
               --exclude='__pycache__' \
               --exclude='*.pyc' \
@@ -196,8 +206,40 @@ deploy_client() {
               threshold_integration_test.py \
               find_rate_reduction.py \
               fomc_rss_feed.py \
-              remote_scripts/ \
+              pyproject.toml \
+              poetry.lock \
               "$TEMP_DIR/"
+    
+    # Copy deploy_logs directory which contains the deployed contract address
+    if [ -d "deploy_logs" ]; then
+        cp -r deploy_logs "$TEMP_DIR/"
+        print_status "Deploy logs directory copied to deployment package"
+    else
+        print_warning "Deploy logs directory not found - client may not be able to resolve contract address"
+    fi
+    
+    # Copy Move.toml as fallback for contract address resolution
+    if [ -f "Move.toml" ]; then
+        cp Move.toml "$TEMP_DIR/"
+        print_status "Move.toml copied to deployment package"
+    else
+        print_warning "Move.toml not found - client may not be able to resolve contract address"
+    fi
+    
+    # Copy .aptos directory which contains the account configuration and keys
+    if [ -d ".aptos" ]; then
+        cp -r .aptos "$TEMP_DIR/"
+        print_status "Aptos configuration directory copied to deployment package"
+    else
+        print_warning ".aptos directory not found - client may not be able to interact with blockchain"
+    fi
+    
+    # Copy remote_scripts directory separately to ensure it's included
+    cp -r remote_scripts "$TEMP_DIR/"
+    
+    # Verify remote_scripts were copied correctly
+    print_status "Verifying files in deployment package..."
+    ls -la "$TEMP_DIR/remote_scripts/" || print_warning "remote_scripts directory not found in temp package"
     
     # Create network config for remote servers
     # Use 0.0.0.0 for server binding to accept external connections
@@ -228,11 +270,22 @@ EOF
     # Copy the keys directory
     if [ -d "keys" ]; then
         cp -r keys "$TEMP_DIR/"
+        print_status "Keys directory copied to deployment package"
+        ls -la "$TEMP_DIR/keys/" || print_warning "Keys directory not found in temp package after copy"
+    else
+        print_warning "Keys directory not found locally - this may cause client deployment to fail"
     fi
     
     # Upload client files
-    rsync -avz -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" \
+    rsync -avz --perms -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" \
           "$TEMP_DIR/" "$DEPLOY_USER@$host:~/fomc-client/"
+    
+    # Verify files were uploaded correctly
+    print_status "Verifying files were uploaded to client..."
+    ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
+       "ls -la ~/fomc-client/" || print_warning "Failed to list client directory"
+    ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
+       "ls -la ~/fomc-client/remote_scripts/" || print_warning "remote_scripts directory not found on client"
     
     # Copy client network config with actual server IPs
     scp -i "$SSH_KEY" -o StrictHostKeyChecking=no \
@@ -241,18 +294,25 @@ EOF
     
     # Setup client environment
     print_status "Setting up client environment..."
+    # First verify the file exists and make the script executable
     if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
-       "cd ~/fomc-client/ && chmod +x remote_scripts/deploy_fomc_client.sh"; then
-        if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
-           "cd ~/fomc-client/ && ./remote_scripts/deploy_fomc_client.sh $DEPLOY_USER ~/fomc-client"; then
-            print_success "✅ Client deployment completed"
-        else
-            print_error "❌ Failed to deploy client"
-            rm -rf "$TEMP_DIR"
-            return 1
-        fi
+       "cd ~/fomc-client/ && ls -la remote_scripts/deploy_fomc_client.sh && chmod +x remote_scripts/deploy_fomc_client.sh"; then
+        print_status "Made deploy_fomc_client.sh executable on client"
     else
         print_error "❌ Failed to make deploy_fomc_client.sh executable on client"
+        print_status "Checking if remote_scripts directory exists..."
+        ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
+           "cd ~/fomc-client/ && ls -la" || true
+        rm -rf "$TEMP_DIR"
+        return 1
+    fi
+    
+    # Then execute the script in a separate command
+    if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$host" \
+       "cd ~/fomc-client/ && ./remote_scripts/deploy_fomc_client.sh $DEPLOY_USER ~/fomc-client"; then
+        print_success "✅ Client deployment completed"
+    else
+        print_error "❌ Failed to deploy client"
         rm -rf "$TEMP_DIR"
         return 1
     fi
@@ -302,24 +362,39 @@ test_deployment() {
     print_status "🧪 Testing deployment on remote client..."
     
     print_status "Running comprehensive health tests on client VM..."
+    # First make the script executable
+    ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$CLIENT_HOST" \
+       "cd ~/fomc-client/ && ls -la remote_scripts/run_health_tests.sh && chmod +x remote_scripts/run_health_tests.sh" 2>/dev/null || true
+    
+    # Then execute the script in a separate command
     if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$CLIENT_HOST" \
-       "cd ~/fomc-client/ && chmod +x remote_scripts/run_health_tests.sh && ./remote_scripts/run_health_tests.sh ~/fomc-client health" 2>/dev/null; then
+       "cd ~/fomc-client/ && ./remote_scripts/run_health_tests.sh ~/fomc-client health" 2>/dev/null; then
         print_success "✅ Remote health tests passed"
     else
         print_warning "⚠️  Remote health tests failed"
     fi
     
     print_status "Running integration tests on client VM..."
+    # First make the script executable
+    ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$CLIENT_HOST" \
+       "cd ~/fomc-client/ && ls -la remote_scripts/run_integration_tests.sh && chmod +x remote_scripts/run_integration_tests.sh" 2>/dev/null || true
+    
+    # Then execute the script in a separate command
     if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$CLIENT_HOST" \
-       "cd ~/fomc-client/ && chmod +x remote_scripts/run_integration_tests.sh && ./remote_scripts/run_integration_tests.sh ~/fomc-client safe" 2>/dev/null; then
+       "cd ~/fomc-client/ && ./remote_scripts/run_integration_tests.sh ~/fomc-client safe" 2>/dev/null; then
         print_success "✅ Remote integration tests passed"
     else
         print_warning "⚠️  Remote integration tests failed"
     fi
     
     print_status "Running threshold signing tests on client VM..."
+    # First make the script executable
+    ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$CLIENT_HOST" \
+       "cd ~/fomc-client/ && ls -la remote_scripts/run_threshold_tests.sh && chmod +x remote_scripts/run_threshold_tests.sh" 2>/dev/null || true
+    
+    # Then execute the script in a separate command
     if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DEPLOY_USER@$CLIENT_HOST" \
-       "cd ~/fomc-client/ && chmod +x remote_scripts/run_threshold_tests.sh && ./remote_scripts/run_threshold_tests.sh ~/fomc-client 4,3 safe" 2>/dev/null; then
+       "cd ~/fomc-client/ && ./remote_scripts/run_threshold_tests.sh ~/fomc-client 4,3 safe" 2>/dev/null; then
         print_success "✅ Remote threshold signing tests passed"
     else
         print_warning "⚠️  Remote threshold signing tests failed"

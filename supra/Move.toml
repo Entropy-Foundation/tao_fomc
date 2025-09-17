@@ -7,14 +7,15 @@ git = 'https://github.com/Entropy-Foundation/aptos-core.git'
 subdir = 'aptos-move/framework/supra-framework'
 rev = 'dev'
 
+
 [dependencies.dexlyn_swap]
 git = 'https://github.com/DexlynLabs/dexlyn_swap_interface.git'
-rev = 'mainnet'
+rev = 'testnet'
 
 [dependencies.core]
 git = "https://github.com/Entropy-Foundation/dora-interface"
-subdir = "supra/mainnet/core"
+subdir = "supra/testnet/core"
 rev = "master"
 
 [addresses]
-fin_triggers = "0xc9fb71cee7945c828b8b64c63991002c07886a8ac2106f46fc339698a0c2f9c6"
+fin_triggers = "0x72a347c7faf5a34ffaf942ea31f33d7dede4a618adbbceb60eff36b950e16b2b"

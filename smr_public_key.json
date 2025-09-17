@@ -1,0 +1,22 @@
+{
+  "active": "fomc-testnet",
+  "list": {
+    "fomc-testnet": {
+      "ed25519_public_key": "aadc9a4a005c908a683bb71909de48759676ced1c6bca94e30c7eacbb35f117b",
+      "account_address": "daecaafda0b4490554eea466979ea0ec05cba78c7a74d31c188ffaa38de3889d",
+      "network": "Localnet",
+      "rpc_url": "https://rpc-testnet.supra.com/",
+      "faucet_url": "https://rpc-testnet.supra.com/",
+      "chain_id": 6
+    },
+    "fomc-dexlyn": {
+      "ed25519_public_key": "eb733dea252e234a41dddd680486044333326da924e4f184b5540f8ab49ca4c5",
+      "account_address": "72a347c7faf5a34ffaf942ea31f33d7dede4a618adbbceb60eff36b950e16b2b",
+      "network": "Localnet",
+      "rpc_url": "https://rpc-testnet.supra.com/",
+      "faucet_url": "https://rpc-testnet.supra.com/",
+      "chain_id": 6
+    }
+  },
+  "version": "f739e52852bef685f2009b6d36fbdbf7df2bec2c"
+}

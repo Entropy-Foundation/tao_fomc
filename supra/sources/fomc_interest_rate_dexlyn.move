@@ -7,6 +7,7 @@ module fin_triggers::fomc_interest_rate_dexlyn {
     use dexlyn_swap::router;
     use supra_framework::coin;
     use supra_framework::event;
+    use supra_framework::supra_account;
     use supra_framework::timestamp;
 
     /// Error codes for BLS verification and admin gating
@@ -94,7 +95,7 @@ module fin_triggers::fomc_interest_rate_dexlyn {
 
         assert!(exists<Config>(@fin_triggers), EINVALID_PUBKEY);
         let cfg = borrow_global<Config>(@fin_triggers);
-        let public_key = vector::copy(&cfg.bls_public_key);
+        let public_key = cfg.bls_public_key;
 
         assert_bls_sig(message, signature, public_key);
 
@@ -132,7 +133,7 @@ module fin_triggers::fomc_interest_rate_dexlyn {
 
     /// Verifies a BLS signature using Aptos stdlib BLS12-381 implementation.
     fun assert_bls_sig(message: vector<u8>, signature: vector<u8>, public_key: vector<u8>) {
-        let mut pk_opt = bls12381::public_key_from_bytes(public_key);
+        let pk_opt = bls12381::public_key_from_bytes(public_key);
         assert!(option::is_some(&pk_opt), EINVALID_PUBKEY);
         let pk = option::extract(&mut pk_opt);
         let sig = bls12381::signature_from_bytes(signature);
@@ -152,7 +153,7 @@ module fin_triggers::fomc_interest_rate_dexlyn {
         if (amount_in == 0) return;
         let coin_in = coin::withdraw<APT>(account, amount_in);
         let out_coin = router::swap_exact_coin_for_coin<APT, USDT, Curve>(coin_in, min_out);
-        coin::deposit<USDT>(addr, out_coin);
+        supra_account::deposit_coins<USDT>(addr, out_coin);
     }
 
     /// Withdraw `pct` percent of USDT balance and swap for APT on DexLyn, depositing the result back.
@@ -167,7 +168,7 @@ module fin_triggers::fomc_interest_rate_dexlyn {
         if (amount_in == 0) return;
         let coin_in = coin::withdraw<USDT>(account, amount_in);
         let out_coin = router::swap_exact_coin_for_coin<USDT, APT, Curve>(coin_in, min_out);
-        coin::deposit<APT>(addr, out_coin);
+        supra_account::deposit_coins<APT>(addr, out_coin);
     }
 
     inline fun percent_of(amount: u64, pct: u64): u64 {

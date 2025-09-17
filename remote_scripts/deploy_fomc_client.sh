@@ -59,12 +59,31 @@ sudo apt install -y \
 
 # Install Poetry
 print_status "Installing Poetry..."
+export PATH="$HOME/.local/bin:$PATH"
 if ! command -v poetry &> /dev/null; then
     curl -sSL https://install.python-poetry.org | python3 -
     export PATH="$HOME/.local/bin:$PATH"
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+    # Source bashrc to ensure PATH is updated in current session
+    source ~/.bashrc || true
 else
     print_success "Poetry already installed"
+fi
+
+# Verify Poetry is available
+if ! command -v poetry &> /dev/null; then
+    print_error "Poetry installation failed or not in PATH"
+    exit 1
+fi
+
+# Verify Poetry configuration files exist
+if [ ! -f "pyproject.toml" ]; then
+    print_error "pyproject.toml not found. This should have been uploaded from local machine."
+    exit 1
+fi
+
+if [ ! -f "poetry.lock" ]; then
+    print_warning "poetry.lock not found. Poetry will create one during install."
 fi
 
 # Install Python dependencies for client with Poetry

@@ -20,6 +20,9 @@ venv/
 *.log
 deploy_logs/
 
+# Temporary files
+tmp/
+
 # Environment files
 .env
 .env.*
