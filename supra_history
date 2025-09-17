@@ -466,3 +466,406 @@ Output:
 }
 
 
+Local: (2025-09-17 15:58:15.564567 +03:00)	 Utc: (2025-09-17 12:58:15.564721 UTC)
+
+CMD:
+Run
+Output:
+Command Aborted Reason(Some(Move(MoveTransactionOutput { gas_used: 6, events: [Event { guid: EventGuid { creation_number: U64(0), account_address: Address(0000000000000000000000000000000000000000000000000000000000000000) }, sequence_number: U64(0), typ: Struct(MoveStructTag { address: Address(0000000000000000000000000000000000000000000000000000000000000001), module: IdentifierWrapper(Identifier("transaction_fee")), name: IdentifierWrapper(Identifier("FeeStatement")), generic_type_params: [] }), data: Object {"execution_gas_units": String("6"), "io_gas_units": String("1"), "storage_fee_quants": String("0"), "storage_fee_refund_quants": String("0"), "total_charge_gas_units": String("6")} }], vm_status: "Move abort in 0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9::fomc_interest_rate_dexlyn: EINVALID_PUBKEY(0x3e9): Error codes for BLS verification and admin gating" }))), Action(Please try again.)
+Local: (2025-09-17 17:54:48.176995 +03:00)	 Utc: (2025-09-17 14:54:48.177193 UTC)
+
+CMD:
+Run
+Output:
+CliProfile: StdIoError(Os { code: 6, kind: Uncategorized, message: "Device not configured" })
+Local: (2025-09-17 17:55:43.990201 +03:00)	 Utc: (2025-09-17 14:55:43.990379 UTC)
+
+CMD:
+Run
+Output:
+Command Aborted Reason(Operation was interrupted by the user), Action(Please try again.)
+Local: (2025-09-17 17:55:58.347351 +03:00)	 Utc: (2025-09-17 14:55:58.347703 UTC)
+
+CMD:
+Run
+Output:
+{
+  "authenticator": {
+    "Move": {
+      "Ed25519": {
+        "public_key": "0x905826a36426370debf2d6b02677f3fe448e39b4070865303c5439542556267d",
+        "signature": "0x6a83fb46a9c0bce3d33285d64a2bc3deed8fda429e0899015bf4e9f841d65b02860a640f200f92418e5215d272770579fe85a0c7a2300244bac916c70266e90a"
+      }
+    }
+  },
+  "block_header": {
+    "author": "0xceca0016b3cfbccd3a40fc9c7600ec5aaab9a0c6ffc48750529469495d45c61a",
+    "hash": "0x443e613b6841ddfef55cb2176c227f77e3e26a7eb4ea23e60ea8ddc22637c177",
+    "height": 35374106,
+    "parent": "0x63c5d6924d2b1826d1975d4fe8d0eab9cd4afd1beefc3d98150e3b4ece6828c7",
+    "timestamp": {
+      "microseconds_since_unix_epoch": 1758120955534712,
+      "utc_date_time": "2025-09-17T14:55:55.534712+00:00"
+    },
+    "view": {
+      "epoch_id": {
+        "chain_id": 6,
+        "epoch": 4226
+      },
+      "round": 11115
+    }
+  },
+  "hash": "0xa19d1c8addf8b9d77971632ecd68206eed5bdd2482fa14793f20f81d11befe58",
+  "header": {
+    "chain_id": 6,
+    "expiration_timestamp": {
+      "microseconds_since_unix_epoch": 1758120985000000,
+      "utc_date_time": "2025-09-17T14:56:25+00:00"
+    },
+    "sender": {
+      "Move": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9"
+    },
+    "sequence_number": 1,
+    "gas_unit_price": 100,
+    "max_gas_amount": 465
+  },
+  "payload": {
+    "Move": {
+      "type": "entry_function_payload",
+      "function": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9::fomc_interest_rate_dexlyn::set_bls_public_key",
+      "type_arguments": [],
+      "arguments": [
+        "0x9235cdfcbb873a05c0c0154ebc353d451148bd41ef57e33bf29f682dc05d35b4b013a0a506a45ed14f3f418a134f638f"
+      ]
+    }
+  },
+  "output": {
+    "Move": {
+      "gas_used": 465,
+      "events": [
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0x0"
+          },
+          "sequence_number": "0",
+          "type": "0x1::transaction_fee::FeeStatement",
+          "data": {
+            "execution_gas_units": "5",
+            "io_gas_units": "1",
+            "storage_fee_quants": "45920",
+            "storage_fee_refund_quants": "0",
+            "total_charge_gas_units": "465"
+          }
+        }
+      ],
+      "vm_status": "Executed successfully"
+    }
+  },
+  "status": "Success"
+}
+
+
+Local: (2025-09-17 17:56:11.616005 +03:00)	 Utc: (2025-09-17 14:56:11.616387 UTC)
+
+CMD:
+Run
+Output:
+Command Aborted Reason(Some(Move(MoveTransactionOutput { gas_used: 50, events: [Event { guid: EventGuid { creation_number: U64(0), account_address: Address(0000000000000000000000000000000000000000000000000000000000000000) }, sequence_number: U64(0), typ: Struct(MoveStructTag { address: Address(0000000000000000000000000000000000000000000000000000000000000001), module: IdentifierWrapper(Identifier("transaction_fee")), name: IdentifierWrapper(Identifier("FeeStatement")), generic_type_params: [] }), data: Object {"execution_gas_units": String("47"), "io_gas_units": String("4"), "storage_fee_quants": String("0"), "storage_fee_refund_quants": String("0"), "total_charge_gas_units": String("50")} }], vm_status: "Move abort in 0x4496a672452b0bf5eff5e1616ebfaf7695e14b02a12ed211dd4f28ac38a5d54c::coin_helper: ERR_CANNOT_BE_THE_SAME_COIN(0xbb8): When both coins have same names and can't be ordered." }))), Action(Please try again.)
+Local: (2025-09-17 18:00:20.473507 +03:00)	 Utc: (2025-09-17 15:00:20.473818 UTC)
+
+CMD:
+Run
+Output:
+{
+  "authenticator": {
+    "Move": {
+      "Ed25519": {
+        "public_key": "0x905826a36426370debf2d6b02677f3fe448e39b4070865303c5439542556267d",
+        "signature": "0x2160970c417035ada1dffb3ed2e9cb14465a037a7a9b6506ffbad0bf34ca5ffa0afa020940f6cd7788efcbbc0fa300eecf74b9905181ee4446f3cf4d66059703"
+      }
+    }
+  },
+  "block_header": {
+    "author": "0xf9022c9f78d7546a72f9875de00eaa4d8c54e7711ecaf26919ab12ff32f3cc4d",
+    "hash": "0x6efb1e1945ae7e489680f919869d0237c781406f59c3689cf79b536276eec938",
+    "height": 35374703,
+    "parent": "0xfc5049cd095104c1c56e0400ad357a1abafc71c651d2bf4108e3de7d649deb8c",
+    "timestamp": {
+      "microseconds_since_unix_epoch": 1758121218680385,
+      "utc_date_time": "2025-09-17T15:00:18.680385+00:00"
+    },
+    "view": {
+      "epoch_id": {
+        "chain_id": 6,
+        "epoch": 4226
+      },
+      "round": 11712
+    }
+  },
+  "hash": "0x352eb5a364edf9ea4949bdafc99a57a7e8547a546bb6b93226857f794b9e1718",
+  "header": {
+    "chain_id": 6,
+    "expiration_timestamp": {
+      "microseconds_since_unix_epoch": 1758121248000000,
+      "utc_date_time": "2025-09-17T15:00:48+00:00"
+    },
+    "sender": {
+      "Move": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9"
+    },
+    "sequence_number": 2,
+    "gas_unit_price": 100,
+    "max_gas_amount": 6
+  },
+  "payload": {
+    "Move": {
+      "type": "entry_function_payload",
+      "function": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9::fomc_interest_rate_dexlyn::set_bls_public_key",
+      "type_arguments": [],
+      "arguments": [
+        "0x9235cdfcbb873a05c0c0154ebc353d451148bd41ef57e33bf29f682dc05d35b4b013a0a506a45ed14f3f418a134f638f"
+      ]
+    }
+  },
+  "output": {
+    "Move": {
+      "gas_used": 6,
+      "events": [
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0x0"
+          },
+          "sequence_number": "0",
+          "type": "0x1::transaction_fee::FeeStatement",
+          "data": {
+            "execution_gas_units": "5",
+            "io_gas_units": "2",
+            "storage_fee_quants": "0",
+            "storage_fee_refund_quants": "0",
+            "total_charge_gas_units": "6"
+          }
+        }
+      ],
+      "vm_status": "Executed successfully"
+    }
+  },
+  "status": "Success"
+}
+
+
+Local: (2025-09-17 18:00:37.577694 +03:00)	 Utc: (2025-09-17 15:00:37.579540 UTC)
+
+CMD:
+Run
+Output:
+{
+  "authenticator": {
+    "Move": {
+      "Ed25519": {
+        "public_key": "0x905826a36426370debf2d6b02677f3fe448e39b4070865303c5439542556267d",
+        "signature": "0xa7abbcbe368212caa4061a76ae266e4a0a474cdc3ce667ebc3004eb7db4ed0dc9a4f79913ac62d4ebbc2fbf19b7bbe6dd9d97e9bfa87f639ba050b1d6895f10d"
+      }
+    }
+  },
+  "block_header": {
+    "author": "0x99f66cbbf44dd35f71e7522187e0d8a877a94c8c0acdcf331ee8f8cb001ecc22",
+    "hash": "0xdf8f93402525b1caacb98a27cb6a60d9188c066521f1ef61238f7f02961d9beb",
+    "height": 35374743,
+    "parent": "0x4e27155e48fdadb6959b422db23ba2f4846ccc1af7eef9b8187bde70ba9d6f78",
+    "timestamp": {
+      "microseconds_since_unix_epoch": 1758121236146983,
+      "utc_date_time": "2025-09-17T15:00:36.146983+00:00"
+    },
+    "view": {
+      "epoch_id": {
+        "chain_id": 6,
+        "epoch": 4226
+      },
+      "round": 11752
+    }
+  },
+  "hash": "0x56f8d3a4f5825250a53c52c95fab5b4b0b34b0508f81840564e71471fd9f602c",
+  "header": {
+    "chain_id": 6,
+    "expiration_timestamp": {
+      "microseconds_since_unix_epoch": 1758121265000000,
+      "utc_date_time": "2025-09-17T15:01:05+00:00"
+    },
+    "sender": {
+      "Move": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9"
+    },
+    "sequence_number": 3,
+    "gas_unit_price": 100,
+    "max_gas_amount": 585
+  },
+  "payload": {
+    "Move": {
+      "type": "entry_function_payload",
+      "function": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9::fomc_interest_rate_dexlyn::record_interest_rate_movement_dexlyn",
+      "type_arguments": [
+        "0x1::supra_coin::SupraCoin",
+        "0x6d5684c3585eada2673a7ac9efca870f384fe332c53d0efe8d90f94c59feb164::coins::USDT",
+        "0x4496a672452b0bf5eff5e1616ebfaf7695e14b02a12ed211dd4f28ac38a5d54c::curves::Uncorrelated"
+      ],
+      "arguments": [
+        "50",
+        false,
+        "0xa002334df2fdf052787961b8087a3ff5d25cc9d81c41126a016cbc85836ec7b01b26f9a30fff6a441c38b4fb77f7d21512ab11d2c4311136215931155256d86490fcdbb609246eeff4736fdaa90565a08ab070d415fa76c3549018a97a4d82d4"
+      ]
+    }
+  },
+  "output": {
+    "Move": {
+      "gas_used": 585,
+      "events": [
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0x0"
+          },
+          "sequence_number": "0",
+          "type": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9::fomc_interest_rate_dexlyn::InterestRateChangeEvent",
+          "data": {
+            "basis_points": "50",
+            "is_increase": false,
+            "timestamp": "1758121236146983"
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9"
+          },
+          "sequence_number": "1",
+          "type": "0x1::account::CoinRegisterEvent",
+          "data": {
+            "type_info": {
+              "account_address": "0x6d5684c3585eada2673a7ac9efca870f384fe332c53d0efe8d90f94c59feb164",
+              "module_name": "0x636f696e73",
+              "struct_name": "0x55534454"
+            }
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0x0"
+          },
+          "sequence_number": "0",
+          "type": "0x1::coin::CoinWithdraw",
+          "data": {
+            "account": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9",
+            "amount": "149898750",
+            "coin_type": "0x1::supra_coin::SupraCoin"
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "3",
+            "account_address": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9"
+          },
+          "sequence_number": "0",
+          "type": "0x1::coin::WithdrawEvent",
+          "data": {
+            "amount": "149898750"
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0x0"
+          },
+          "sequence_number": "0",
+          "type": "0x4496a672452b0bf5eff5e1616ebfaf7695e14b02a12ed211dd4f28ac38a5d54c::dao_storage::CoinDepositedEventV2",
+          "data": {
+            "curve": "0x4496a672452b0bf5eff5e1616ebfaf7695e14b02a12ed211dd4f28ac38a5d54c::curves::Uncorrelated",
+            "pair_x": "0x6d5684c3585eada2673a7ac9efca870f384fe332c53d0efe8d90f94c59feb164::coins::USDT",
+            "pair_y": "0x1::supra_coin::SupraCoin",
+            "x_val": "0",
+            "y_val": "149898"
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0x0"
+          },
+          "sequence_number": "0",
+          "type": "0x4496a672452b0bf5eff5e1616ebfaf7695e14b02a12ed211dd4f28ac38a5d54c::liquidity_pool::OracleUpdatedEvent",
+          "data": {
+            "curve": "0x4496a672452b0bf5eff5e1616ebfaf7695e14b02a12ed211dd4f28ac38a5d54c::curves::Uncorrelated",
+            "last_price_x_cumulative": "5773169294112111075885762653494",
+            "last_price_y_cumulative": "9393322643195454214023",
+            "pair_x": "0x6d5684c3585eada2673a7ac9efca870f384fe332c53d0efe8d90f94c59feb164::coins::USDT",
+            "pair_y": "0x1::supra_coin::SupraCoin",
+            "timestamp": "1758121236"
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0x0"
+          },
+          "sequence_number": "0",
+          "type": "0x4496a672452b0bf5eff5e1616ebfaf7695e14b02a12ed211dd4f28ac38a5d54c::liquidity_pool::SwapEvent",
+          "data": {
+            "curve": "0x4496a672452b0bf5eff5e1616ebfaf7695e14b02a12ed211dd4f28ac38a5d54c::curves::Uncorrelated",
+            "pair_x": "0x6d5684c3585eada2673a7ac9efca870f384fe332c53d0efe8d90f94c59feb164::coins::USDT",
+            "pair_y": "0x1::supra_coin::SupraCoin",
+            "reserve_x": "412121494",
+            "reserve_y": "12163622573457",
+            "timestamp": "1758121236",
+            "x_in": "0",
+            "x_out": "5063",
+            "y_in": "149898750",
+            "y_out": "0"
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0x0"
+          },
+          "sequence_number": "0",
+          "type": "0x1::coin::CoinDeposit",
+          "data": {
+            "account": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9",
+            "amount": "5063",
+            "coin_type": "0x6d5684c3585eada2673a7ac9efca870f384fe332c53d0efe8d90f94c59feb164::coins::USDT"
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "4",
+            "account_address": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9"
+          },
+          "sequence_number": "0",
+          "type": "0x1::coin::DepositEvent",
+          "data": {
+            "amount": "5063"
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0x0"
+          },
+          "sequence_number": "0",
+          "type": "0x1::transaction_fee::FeeStatement",
+          "data": {
+            "execution_gas_units": "80",
+            "io_gas_units": "12",
+            "storage_fee_quants": "49240",
+            "storage_fee_refund_quants": "0",
+            "total_charge_gas_units": "585"
+          }
+        }
+      ],
+      "vm_status": "Executed successfully"
+    }
+  },
+  "status": "Success"
+}
+
+
