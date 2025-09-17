@@ -3569,3 +3569,203 @@ Output:
 }
 
 
+Local: (2025-09-17 20:42:26.796444 +03:00)	 Utc: (2025-09-17 17:42:26.797061 UTC)
+
+CMD:
+Run
+Output:
+{
+  "authenticator": {
+    "Move": {
+      "Ed25519": {
+        "public_key": "0x905826a36426370debf2d6b02677f3fe448e39b4070865303c5439542556267d",
+        "signature": "0xf99198effeaf3178a24b053fafa6bb71dc76bd13e1cc8e7d32fe0b427006803d4e0dbb951085c7ebbb4658e0561f8a3256ef4234f763c3fdc9df023d21920c04"
+      }
+    }
+  },
+  "block_header": {
+    "author": "0xc0ce0dbd0c2b8edd03d1dd7cbf13c4d586b85f49953047e810f8db3ab5c5246c",
+    "hash": "0xc4f37b054c1972dc76e73e196aa050dd2f2c5116239dfcbc251d775985386f39",
+    "height": 35396979,
+    "parent": "0x7306f69c237d62753086cf8b0595678361990ca5db26782065967317be5ed892",
+    "timestamp": {
+      "microseconds_since_unix_epoch": 1758130944789874,
+      "utc_date_time": "2025-09-17T17:42:24.789874+00:00"
+    },
+    "view": {
+      "epoch_id": {
+        "chain_id": 6,
+        "epoch": 4228
+      },
+      "round": 1098
+    }
+  },
+  "hash": "0x2dabc56ffefa61208a7b1454a6284064b2dddf13a4a61ea4e4b199d1d0f7df4d",
+  "header": {
+    "chain_id": 6,
+    "expiration_timestamp": {
+      "microseconds_since_unix_epoch": 1758130973000000,
+      "utc_date_time": "2025-09-17T17:42:53+00:00"
+    },
+    "sender": {
+      "Move": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9"
+    },
+    "sequence_number": 19,
+    "gas_unit_price": 100,
+    "max_gas_amount": 1000
+  },
+  "payload": {
+    "Move": {
+      "type": "entry_function_payload",
+      "function": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9::fomc_interest_rate_dexlyn::record_interest_rate_movement_dexlyn",
+      "type_arguments": [
+        "0x1::supra_coin::SupraCoin",
+        "0x6d5684c3585eada2673a7ac9efca870f384fe332c53d0efe8d90f94c59feb164::coins::USDT",
+        "0x4496a672452b0bf5eff5e1616ebfaf7695e14b02a12ed211dd4f28ac38a5d54c::curves::Uncorrelated"
+      ],
+      "arguments": [
+        "0",
+        false,
+        "0xb918c1e476b8a00ddde085324beb19050d82c25cd20c2d4ac68e66a4ec5510ebf6b6cdf14292f79cf0ba982afef85aaa04f4bdd99157ccdd7dad2ce71648b84a8e3f0aa939cf97d6acf5d5227a269059d41277810941a51af2dd49d7c0280145"
+      ]
+    }
+  },
+  "output": {
+    "Move": {
+      "gas_used": 91,
+      "events": [
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0x0"
+          },
+          "sequence_number": "0",
+          "type": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9::fomc_interest_rate_dexlyn::InterestRateChangeEvent",
+          "data": {
+            "basis_points": "0",
+            "is_increase": false,
+            "timestamp": "1758130944789874"
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0x0"
+          },
+          "sequence_number": "0",
+          "type": "0x1::coin::CoinWithdraw",
+          "data": {
+            "account": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9",
+            "amount": "201",
+            "coin_type": "0x6d5684c3585eada2673a7ac9efca870f384fe332c53d0efe8d90f94c59feb164::coins::USDT"
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "5",
+            "account_address": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9"
+          },
+          "sequence_number": "8",
+          "type": "0x1::coin::WithdrawEvent",
+          "data": {
+            "amount": "201"
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0x0"
+          },
+          "sequence_number": "0",
+          "type": "0x4496a672452b0bf5eff5e1616ebfaf7695e14b02a12ed211dd4f28ac38a5d54c::dao_storage::CoinDepositedEventV2",
+          "data": {
+            "curve": "0x4496a672452b0bf5eff5e1616ebfaf7695e14b02a12ed211dd4f28ac38a5d54c::curves::Uncorrelated",
+            "pair_x": "0x6d5684c3585eada2673a7ac9efca870f384fe332c53d0efe8d90f94c59feb164::coins::USDT",
+            "pair_y": "0x1::supra_coin::SupraCoin",
+            "x_val": "0",
+            "y_val": "0"
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0x0"
+          },
+          "sequence_number": "0",
+          "type": "0x4496a672452b0bf5eff5e1616ebfaf7695e14b02a12ed211dd4f28ac38a5d54c::liquidity_pool::OracleUpdatedEvent",
+          "data": {
+            "curve": "0x4496a672452b0bf5eff5e1616ebfaf7695e14b02a12ed211dd4f28ac38a5d54c::curves::Uncorrelated",
+            "last_price_x_cumulative": "5778454786456791665196957072897",
+            "last_price_y_cumulative": "9399390195547847478933",
+            "pair_x": "0x6d5684c3585eada2673a7ac9efca870f384fe332c53d0efe8d90f94c59feb164::coins::USDT",
+            "pair_y": "0x1::supra_coin::SupraCoin",
+            "timestamp": "1758130944"
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0x0"
+          },
+          "sequence_number": "0",
+          "type": "0x4496a672452b0bf5eff5e1616ebfaf7695e14b02a12ed211dd4f28ac38a5d54c::liquidity_pool::SwapEvent",
+          "data": {
+            "curve": "0x4496a672452b0bf5eff5e1616ebfaf7695e14b02a12ed211dd4f28ac38a5d54c::curves::Uncorrelated",
+            "pair_x": "0x6d5684c3585eada2673a7ac9efca870f384fe332c53d0efe8d90f94c59feb164::coins::USDT",
+            "pair_y": "0x1::supra_coin::SupraCoin",
+            "reserve_x": "412126083",
+            "reserve_y": "12163488129463",
+            "timestamp": "1758130944",
+            "x_in": "201",
+            "x_out": "0",
+            "y_in": "0",
+            "y_out": "5914519"
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0x0"
+          },
+          "sequence_number": "0",
+          "type": "0x1::coin::CoinDeposit",
+          "data": {
+            "account": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9",
+            "amount": "5914519",
+            "coin_type": "0x1::supra_coin::SupraCoin"
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "2",
+            "account_address": "0xb993b8afb07eadc713990f90ec5c422e664c13741dc0e932916a98863cd241a9"
+          },
+          "sequence_number": "9",
+          "type": "0x1::coin::DepositEvent",
+          "data": {
+            "amount": "5914519"
+          }
+        },
+        {
+          "guid": {
+            "creation_number": "0",
+            "account_address": "0x0"
+          },
+          "sequence_number": "0",
+          "type": "0x1::transaction_fee::FeeStatement",
+          "data": {
+            "execution_gas_units": "79",
+            "io_gas_units": "12",
+            "storage_fee_quants": "0",
+            "storage_fee_refund_quants": "0",
+            "total_charge_gas_units": "91"
+          }
+        }
+      ],
+      "vm_status": "Executed successfully"
+    }
+  },
+  "status": "Success"
+}
+
+

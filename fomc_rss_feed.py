@@ -90,14 +90,37 @@ def _find_target_link(news_items, target_utc):
 
     return None
 
-def main(poll_interval):
+def _latest_link(news_items):
+    dated_items = []
+
+    for item in news_items:
+        pub_date = _parse_pub_date(item.get("pub_date"))
+        if not pub_date:
+            continue
+
+        if pub_date.tzinfo is None:
+            pub_date = pub_date.replace(tzinfo=timezone.utc)
+
+        dated_items.append((pub_date.astimezone(timezone.utc), item))
+
+    if not dated_items:
+        return None
+
+    _, newest_item = max(dated_items, key=lambda pair: pair[0])
+    return newest_item.get("link")
+
+
+def main(poll_interval, return_latest):
     keywords = ["FOMC", "statement"]
 
     while True:
         latest_news = get_fomc_news()
         if latest_news:
             filtered_articles = filter_news(latest_news, keywords=keywords)
-            link = _find_target_link(filtered_articles, TARGET_ANNOUNCEMENT_TIME_UTC)
+            if return_latest:
+                link = _latest_link(filtered_articles)
+            else:
+                link = _find_target_link(filtered_articles, TARGET_ANNOUNCEMENT_TIME_UTC)
             if link:
                 print(link)
                 break
@@ -113,7 +136,12 @@ if __name__ == "__main__":
         default=DEFAULT_POLL_INTERVAL_SECONDS,
         help="Polling interval in seconds (default: %(default)s)",
     )
+    parser.add_argument(
+        "--test-latest",
+        action="store_true",
+        help="Return the newest matching link immediately for testing",
+    )
 
     args = parser.parse_args()
     poll_interval = max(1, args.interval)
-    main(poll_interval)
+    main(poll_interval, args.test_latest)

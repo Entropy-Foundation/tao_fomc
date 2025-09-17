@@ -7,11 +7,29 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON_BIN="${PYTHON:-python3}"
 
-link_output="$($PYTHON_BIN "$SCRIPT_DIR/fomc_rss_feed.py" "$@" | tail -n 1 | tr -d '\r')"
+test_latest=0
+declare -a monitor_args=()
+
+for arg in "$@"; do
+  case "$arg" in
+    --test-latest)
+      test_latest=1
+      ;;
+    *)
+      monitor_args+=("$arg")
+      ;;
+  esac
+done
+
+if [[ $test_latest -eq 1 ]]; then
+  monitor_args+=("--test-latest")
+fi
+
+link_output="$($PYTHON_BIN "$SCRIPT_DIR/fomc_rss_feed.py" "${monitor_args[@]}" | tail -n 1 | tr -d '\r')"
 
 if [[ -z "$link_output" ]]; then
   echo "Error: No link received from fomc_rss_feed.py" >&2
   exit 1
 fi
 
-exec "$PYTHON_BIN" "$SCRIPT_DIR/integration_test.py" "$link_output"
+exec "$PYTHON_BIN" "$SCRIPT_DIR/threshold_integration_supra.py" "$link_output"
