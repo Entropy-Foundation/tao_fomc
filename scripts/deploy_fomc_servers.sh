@@ -6,8 +6,12 @@
 
 set -e  # Exit on any error
 
-# Load environment variables from threshold-ai-oracle directory
-ORACLE_ENV_FILE="/Users/yinyang/threshold-ai-oracle/.env"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT"
+
+# Load environment variables from repo .env
+ORACLE_ENV_FILE="$REPO_ROOT/.env"
 if [ -f "$ORACLE_ENV_FILE" ]; then
     export $(grep -v '^#' "$ORACLE_ENV_FILE" | xargs)
 else
@@ -234,12 +238,29 @@ deploy_client() {
         print_warning ".aptos directory not found - client may not be able to interact with blockchain"
     fi
     
-    # Copy remote_scripts directory separately to ensure it's included
-    cp -r remote_scripts "$TEMP_DIR/"
-    
+    # Copy only client-appropriate remote scripts
+    local temp_remote_scripts="$TEMP_DIR/remote_scripts"
+    mkdir -p "$temp_remote_scripts"
+
+    local client_scripts=(
+        "remote_scripts/deploy_fomc_client.sh"
+        "remote_scripts/run_health_tests.sh"
+        "remote_scripts/run_integration_tests.sh"
+        "remote_scripts/run_threshold_tests.sh"
+        "remote_scripts/health_check.sh"
+    )
+
+    for script_path in "${client_scripts[@]}"; do
+        if [ -f "$script_path" ]; then
+            cp "$script_path" "$temp_remote_scripts/"
+        else
+            print_warning "Expected client helper missing locally: $script_path"
+        fi
+    done
+
     # Verify remote_scripts were copied correctly
     print_status "Verifying files in deployment package..."
-    ls -la "$TEMP_DIR/remote_scripts/" || print_warning "remote_scripts directory not found in temp package"
+    ls -la "$temp_remote_scripts" || print_warning "remote_scripts directory not found in temp package"
     
     # Create network config for remote servers
     # Use 0.0.0.0 for server binding to accept external connections

@@ -10,8 +10,8 @@ if ! command -v tmux >/dev/null 2>&1; then
     exit 1
 fi
 
-# Load environment variables from threshold-ai-oracle directory
-ORACLE_ENV_FILE="/Users/yinyang/threshold-ai-oracle/.env"
+# Load environment variables from repo .env
+ORACLE_ENV_FILE="$REPO_ROOT/.env"
 if [ -f "$ORACLE_ENV_FILE" ]; then
     # shellcheck disable=SC2046
     export $(grep -v '^#' "$ORACLE_ENV_FILE" | xargs)
@@ -146,10 +146,27 @@ deploy_client() {
         print_warning ".aptos directory not found - client may not be able to interact with blockchain"
     fi
 
-    cp -r remote_scripts "$temp_dir/"
+    local temp_remote_scripts="$temp_dir/remote_scripts"
+    mkdir -p "$temp_remote_scripts"
+
+    local client_scripts=(
+        "remote_scripts/deploy_fomc_client.sh"
+        "remote_scripts/run_health_tests.sh"
+        "remote_scripts/run_integration_tests.sh"
+        "remote_scripts/run_threshold_tests.sh"
+        "remote_scripts/health_check.sh"
+    )
+
+    for script_path in "${client_scripts[@]}"; do
+        if [ -f "$script_path" ]; then
+            cp "$script_path" "$temp_remote_scripts/"
+        else
+            print_warning "Expected client helper missing locally: $script_path"
+        fi
+    done
 
     print_status "Verifying files in deployment package..."
-    ls -la "$temp_dir/remote_scripts/" || print_warning "remote_scripts directory not found in temp package"
+    ls -la "$temp_remote_scripts" || print_warning "remote_scripts directory not found in temp package"
 
     cat > "$temp_dir/network_config.json" <<JSON
 {
